@@ -107,5 +107,7 @@ directly. By default, this variable is set to hardware mode (`SGX_MODE=HW`).
 You can build this project in debug mode by setting `SGX_DEBUG=1`, otherwise both C and Rust parts will be built in release
 mode.
 
-The project is also `no-std` by default. This can be changed by set `BUILD_STD=cargo` or changing the Makefile directly. 
-However, we don't recommend this.
+The project is also `no-std` by default. This can be changed by set `BUILD_STD=cargo` or changing the Makefile directly.
+However, we don't recommend this. You will also need extra libraries which you can find [here](https://github.com/apache/incubator-teaclave-sgx-sdk/tree/v2.0.0-preview/rustlib).
+Afterward, set the `RUST_TARGET_PATH` environment variable to point to directory holding these files.
+

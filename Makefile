@@ -68,11 +68,10 @@ BUILD_STD ?= no
 
 Rust_Build_Target := x86_64-unknown-linux-sgx
 
-
 ifeq ($(BUILD_STD), cargo)
 	Rust_Build_Std := $(Rust_Build_Flags) -Zbuild-std=core,alloc
 	Rust_Std_Features :=
-	Rust_Target_Flags := --target $(Rust_Target_Path)/$(Rust_Build_Target).json
+	Rust_Target_Flags := --target $(RUST_TARGET_PATH)/$(Rust_Build_Target).json
 	Rust_Sysroot_Path := $(CURDIR)/sysroot
 	Rust_Sysroot_Flags := RUSTFLAGS="--sysroot $(Rust_Sysroot_Path)"
 endif
@@ -149,11 +148,11 @@ service:
 .PHONY: enclave
 enclave:
 ifeq ($(BUILD_STD), cargo)
-	@cd $(Rust_Target_Path)/std && cargo build $(Rust_Build_Std) $(Rust_Target_Flags) $(Rust_Std_Features)
+	@cd $(RUST_TARGET_PATH)/std && cargo build $(Rust_Build_Std) $(Rust_Target_Flags) $(Rust_Std_Features)
 
 	@rm -rf $(Rust_Sysroot_Path)
 	@mkdir -p $(Rust_Sysroot_Path)/lib/rustlib/$(Rust_Build_Target)/lib
-	@cp -r $(Rust_Target_Path)/std/target/$(Rust_Build_Target)/$(Rust_Build_Out)/deps/* $(Rust_Sysroot_Path)/lib/rustlib/$(Rust_Build_Target)/lib
+	@cp -r $(RUST_TARGET_PATH)/std/target/$(Rust_Build_Target)/$(Rust_Build_Out)/deps/* $(Rust_Sysroot_Path)/lib/rustlib/$(Rust_Build_Target)/lib
 
 	@cd enclave && $(Rust_Sysroot_Flags) cargo build $(Rust_Target_Flags) $(RustEnclave_Build_Flags)
 else
@@ -169,8 +168,15 @@ run: $(Service_Name) $(RustEnclave_Signed_Name)
 
 .PHONY: clean
 clean:
+ifeq ($(BUILD_STD), cargo)
 	@rm -f $(Service_Name) $(RustEnclave_Name) $(RustEnclave_Signed_Name) enclave/*_t.* service/*_u.*
 	@cd enclave && cargo clean
 	@cd service && cargo clean
-	@cd $(Rust_Target_Path) && cargo clean
+	@cd $(RUST_TARGET_PATH) && cargo clean
 	@rm -rf $(CUSTOM_BIN_PATH) $(CUSTOM_LIBRARY_PATH) $(CUSTOM_SYSROOT_PATH)
+else
+	@rm -f $(Service_Name) $(RustEnclave_Name) $(RustEnclave_Signed_Name) enclave/*_t.* service/*_u.*
+	@cd enclave && cargo clean
+	@cd service && cargo clean
+	@rm -rf $(CUSTOM_BIN_PATH) $(CUSTOM_LIBRARY_PATH) $(CUSTOM_SYSROOT_PATH)
+endif
