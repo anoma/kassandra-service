@@ -1,6 +1,14 @@
 [package]
 name = "enclave"
-version = "0.1.0"
+authors = ["Heliax AG<hello@heliax.dev>"]
+version = "0.0.1"
+license = "GPL-3.0"
 edition = "2021"
 
+[lib]
+name = "enclave"
+crate-type = ["staticlib"]
+
 [dependencies]
+sgx_types = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview" }
+sgx_tstd = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview" }

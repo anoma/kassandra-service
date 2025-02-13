@@ -102,7 +102,7 @@ It firstly assumes that SGX SDK has been installed at `/opt/intel/sgxsdk`. This 
 Makefile directly or by setting the `SGX_SDK` environment variable to the correct path.
 
 Secondly, if you wish to run this library in simulation mode, you can either set `SGX_MODE=SIM` or change the Makefile 
-directly. By default, this variable is set to hardware mode (`SGX_SKD=HW`).
+directly. By default, this variable is set to hardware mode (`SGX_MODE=HW`).
 
 You can build this project in debug mode by setting `SGX_DEBUG=1`, otherwise both C and Rust parts will be built in release
 mode.
