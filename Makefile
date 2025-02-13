@@ -40,7 +40,7 @@ SGX_ENCLAVE_SIGNER := $(SGX_BIN_PATH)/sgx_sign
 ######## CUSTOM Settings ########
 
 CUSTOM_LIBRARY_PATH := ./lib
-CUSTOM_BIN_PATH := ./bins
+CUSTOM_BIN_PATH := ./bin
 CUSTOM_SYSROOT_PATH := ./sysroot
 CUSTOM_EDL_PATH := $(ROOT_DIR)/sgx_edl/edl
 CUSTOM_COMMON_PATH := $(ROOT_DIR)/common
@@ -172,5 +172,5 @@ clean:
 	@rm -f $(Service_Name) $(RustEnclave_Name) $(RustEnclave_Signed_Name) enclave/*_t.* service/*_u.*
 	@cd enclave && cargo clean
 	@cd service && cargo clean
-	@cd $(Rust_Target_Path)/std && cargo clean
+	@cd $(Rust_Target_Path) && cargo clean
 	@rm -rf $(CUSTOM_BIN_PATH) $(CUSTOM_LIBRARY_PATH) $(CUSTOM_SYSROOT_PATH)
