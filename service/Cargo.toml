@@ -1,0 +1,10 @@
+[package]
+name = "service"
+authors = ["Heliax AG<hello@heliax.dev>"]
+edition = "2021"
+license = "GPL-3.0"
+version = "0.0.1"
+
+[dependencies]
+sgx_types = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview"}
+sgx_urts = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview"}
