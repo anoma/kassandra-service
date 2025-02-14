@@ -1,0 +1,64 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+[package]
+name = "teaclave_attestation"
+version = "0.6.0"
+authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
+description = "Provides TLS-based remote attestation mechanism in Teaclave."
+license = "Apache-2.0"
+edition = "2021"
+
+[features]
+default = ["mesalock_sgx"]
+app = ["sgx_crypto/ucrypto"]
+mesalock_sgx = [
+    "sgx_crypto/tcrypto",
+    "sgx_rand/trand",
+    "sgx_tse",
+]
+
+# enclave_unit_test = ["teaclave_test_utils/mesalock_sgx"]
+
+[dependencies]
+anyhow = { version = "1.0.26" }
+base64 = { version = "0.13.0" }
+bit-vec = { version = "0.6.1", default-features = false }
+cfg-if = { version = "0.1.9" }
+chrono = { version = "0.4.6", default-features = false }
+hex = { version = "0.4.0" }
+httparse = { version = "1.3.2", default-features = false }
+log = { version = "0.4.17", features = ["release_max_level_info"] }
+num-bigint = { version = "0.2.2" }
+percent-encoding = { version = "2.1.0" }
+ring = "0.16.20"
+rustls = { version = "0.21.1", features = ["dangerous_configuration"] }
+rustls-pemfile = { version = "1" }
+rustls-webpki = { version = "0.100.0" }
+serde = { version = "1.0.92", features = ["derive"] }
+serde_json = { version = "1.0.39" }
+thiserror = { version = "1.0.9" }
+toml = "0.8.20"
+url = { version = "2.1.1" }
+uuid = { version = "0.8.1", features = ["v4"] }
+webpki-roots = { version = "0.23.0" }
+yasna = { version = "0.3.0", features = ["bit-vec", "num-bigint", "chrono"] }
+
+sgx_crypto = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview", default-features = false, optional = true}
+sgx_tse = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview", features = ["capi"], optional = true }
+sgx_rand = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview", default-features = false, optional = true }
+sgx_types = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview" }
