@@ -25,16 +25,14 @@ use crate::EndorsedAttestationReport;
 use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::{Duration, SystemTime};
-#[allow(unused_imports)]
-#[cfg(feature = "mesalock_sgx")]
-use std::untrusted::time::SystemTimeEx;
 
 use anyhow::{anyhow, Result};
 use log::debug;
-use teaclave_config::build::ATTESTATION_VALIDITY_SECS;
 
-const CERT_ISSUER: &str = "Teaclave";
-const CERT_SUBJECT: &str = "CN=Teaclave";
+/// The valid duration of one attestation report in seconds.
+pub const ATTESTATION_VALIDITY_SECS: u64 =3600;
+const CERT_ISSUER: &str = "Anoma";
+const CERT_SUBJECT: &str = "CN=Anoma";
 
 pub struct RemoteAttestation {
     attestation_config: Arc<AttestationConfig>,

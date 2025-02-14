@@ -16,8 +16,8 @@
 # under the License.
 
 [package]
-name = "teaclave_attestation"
-version = "0.6.0"
+name = "attestation"
+version = "0.0.1"
 authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
 description = "Provides TLS-based remote attestation mechanism in Teaclave."
 license = "Apache-2.0"

@@ -15,6 +15,38 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34ac096ce696dc2fcabef30516bb13c0a68a11d30131d3df6f04711467681b04"
 
 [[package]]
+name = "attestation"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "base64 0.13.1",
+ "bit-vec",
+ "cfg-if 0.1.10",
+ "chrono",
+ "hex",
+ "httparse",
+ "log",
+ "num-bigint",
+ "percent-encoding",
+ "ring 0.16.20",
+ "rustls",
+ "rustls-pemfile",
+ "rustls-webpki 0.100.3",
+ "serde",
+ "serde_json",
+ "sgx_crypto",
+ "sgx_rand",
+ "sgx_tse",
+ "sgx_types",
+ "thiserror",
+ "toml",
+ "url",
+ "uuid",
+ "webpki-roots",
+ "yasna",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -723,38 +755,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "teaclave_attestation"
-version = "0.6.0"
-dependencies = [
- "anyhow",
- "base64 0.13.1",
- "bit-vec",
- "cfg-if 0.1.10",
- "chrono",
- "hex",
- "httparse",
- "log",
- "num-bigint",
- "percent-encoding",
- "ring 0.16.20",
- "rustls",
- "rustls-pemfile",
- "rustls-webpki 0.100.3",
- "serde",
- "serde_json",
- "sgx_crypto",
- "sgx_rand",
- "sgx_tse",
- "sgx_types",
- "thiserror",
- "toml",
- "url",
- "uuid",
- "webpki-roots",
- "yasna",
 ]
 
 [[package]]
