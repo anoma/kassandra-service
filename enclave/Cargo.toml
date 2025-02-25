@@ -10,5 +10,13 @@ name = "enclave"
 crate-type = ["staticlib"]
 
 [dependencies]
+rustls = "0.23.23"
+serde_json = "1.0.138"
+sgx_crypto = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview" }
+sgx_libc = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview" }
+sgx_tse = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview", features = ["capi"]}
+sgx_trts = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview" }
 sgx_types = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview" }
-sgx_tstd = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "v2.0.0-preview" }
+webpki = "0.21.4"
+yasna = { version = "0.3", features = ["bit-vec", "num-bigint", "chrono" ] }
+webpki-roots = "0.26.8"
