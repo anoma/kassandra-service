@@ -122,7 +122,7 @@ impl HostCom {
                         buf_size += 1024;
                         break;
                     }
-                    e => return e,
+                    Err(e) => return Err(e),
                 }
             }
         }
