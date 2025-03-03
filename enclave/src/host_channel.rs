@@ -1,9 +1,8 @@
 use alloc::vec;
 use alloc::vec::Vec;
-use core::fmt::Debug;
+
 use cobs::CobsEncoder;
 use ostd::arch::x86::device::serial::SerialPort;
-use ostd::prelude::*;
 use ostd::sync::Mutex;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -112,8 +111,8 @@ impl HostCom {
             decoder.push(&read_bytes).expect("Previously read bytes should not produce a frame error.");
             loop {
                 match decoder.feed(Self::read_byte()) {
-                    None => continue,
-                    Some(len) => {
+                    Ok(None) => continue,
+                    Ok(Some(len)) => {
                         let mut decoded = vec![];
                         decoded.copy_from_slice(&frame_buf[..len]);
                         break 'outer Ok(Some(Frame { bytes: decoded }))
