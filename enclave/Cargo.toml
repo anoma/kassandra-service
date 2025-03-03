@@ -1,0 +1,15 @@
+[package]
+name = "fmd-enclave-service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cobs = { version = "0.3.0" , default-features = false }
+serde = { version = "1.0.218" , default-features = false, features = ["derive"]}
+serde_cbor = { version = "0.11.2", default-features = false, features = ["alloc"] }
+
+[dependencies.ostd]
+version = "0.11.3"
+
+[workspace]
+exclude = ["target/osdk/base", "target/osdk/test-base"]
