@@ -1,10 +1,10 @@
 #![no_std]
 extern crate alloc;
-mod host_channel;
+mod host;
 
 use ostd::prelude::*;
 
-use crate::host_channel::HostCom;
+use crate::host::HostCom;
 
 #[ostd::main]
 fn kernel_main() {

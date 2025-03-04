@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+
+exclude = [
+    "enclave"
+]
+members = ["host"]

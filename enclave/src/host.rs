@@ -1,3 +1,5 @@
+//! Tools for interacting with host environment
+
 use alloc::vec;
 use alloc::vec::Vec;
 
@@ -6,25 +8,26 @@ use ostd::arch::x86::device::serial::SerialPort;
 use ostd::sync::Mutex;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
+/// Messages to host environment
 #[derive(Clone, Serialize, Deserialize)]
 enum MsgToHost {
     Error(alloc::string::String)
 }
 
+/// Messages from host environment
 #[derive(Clone, Serialize, Deserialize)]
 enum MsgFromHost {
 
 }
 
-struct Frame {
-    bytes: Vec<u8>,
-}
-
-impl Frame {
-    fn deserialize<T: DeserializeOwned>(self) -> serde_cbor::Result<T> {
-        serde_cbor::from_slice(&self.bytes)
-    }
+#[derive(Error, Debug)]
+pub enum MsgError {
+    #[error("COBS failed to decode message from COM 2 with: {0}")]
+    Decode(cobs::DecodeError),
+    #[error("Failed to deserialize CBOR with: {0}")]
+    Deserialize(serde_cbor::Error)
 }
 
 /// A serial port for communicating with the host.
@@ -34,6 +37,17 @@ static HOST_COM: Mutex<SerialPort> = Mutex::new(
     // Serial port: COM 2
  unsafe { SerialPort::new(0x2F8) },
 );
+
+struct Frame {
+    bytes: Vec<u8>,
+}
+
+impl Frame {
+    fn deserialize<T: DeserializeOwned>(self) -> Result<T, MsgError> {
+        serde_cbor::from_slice(&self.bytes)
+            .map_err(MsgError::Deserialize)
+    }
+}
 
 impl HostCom {
     /// Initialize the connection
@@ -60,18 +74,19 @@ impl HostCom {
         Self::write_bytes(&frame_buf[..size]);
     }
 
-    /// Non-blocking attempt to read a byte from the port
-    pub fn try_read_bytes() -> Option<u8> {
-        let com = HOST_COM.lock();
-        if com.line_status() & 1 == 1 {
-            Some(com.recv())
+    /// If data is available on the port, attempts to read it and
+    /// deserialize it, which is blocking. If no data is available,
+    /// it does not wait but returns immediately.
+    pub fn try_read<T: DeserializeOwned>() -> Result<Option<T>, MsgError> {
+        if let Some(frame) = Self::try_read_frame()? {
+            frame.deserialize()
         } else {
-            None
+            Ok(None)
         }
     }
 
     /// Block until a byte is read
-    pub fn read_byte() -> u8 {
+    fn read_byte() -> u8 {
         let com = HOST_COM.lock();
         loop {
             if com.line_status() & 1 == 1 {
@@ -91,7 +106,7 @@ impl HostCom {
     /// or an error occurs.
     ///
     /// Returns the raw framed bytes
-    pub fn try_read_frame() -> core::result::Result<Option<Frame>, cobs::DecodeError> {
+    fn try_read_frame() -> Result<Option<Frame>, MsgError> {
         // check if data is available, otherwise return early
         if HOST_COM.lock().line_status() & 1 != 1 {
             return Ok(None)
@@ -122,7 +137,7 @@ impl HostCom {
                         buf_size += 1024;
                         break;
                     }
-                    Err(e) => return Err(e),
+                    Err(e) => return Err(MsgError::Decode(e)),
                 }
             }
         }
