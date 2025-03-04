@@ -1,5 +1,6 @@
 //! Tools for interacting with host environment
 
+use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 
@@ -9,6 +10,7 @@ use ostd::sync::Mutex;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use crate::host::MsgError::Utf8;
 
 /// Messages to host environment
 #[derive(Clone, Serialize, Deserialize)]
@@ -27,7 +29,9 @@ pub enum MsgError {
     #[error("COBS failed to decode message from COM 2 with: {0}")]
     Decode(cobs::DecodeError),
     #[error("Failed to deserialize CBOR with: {0}")]
-    Deserialize(serde_cbor::Error)
+    Deserialize(serde_cbor::Error),
+    #[error("Input bytes were not valid utf-8")]
+    Utf8,
 }
 
 /// A serial port for communicating with the host.
@@ -80,6 +84,14 @@ impl HostCom {
     pub fn try_read<T: DeserializeOwned>() -> Result<Option<T>, MsgError> {
         if let Some(frame) = Self::try_read_frame()? {
             frame.deserialize()
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn try_read_string() -> Result<Option<String>, MsgError> {
+        if let Some(frame) = Self::try_read_frame()? {
+            Ok(Some(String::from_utf8(frame.bytes).map_err(|_| Utf8)?))
         } else {
             Ok(None)
         }
