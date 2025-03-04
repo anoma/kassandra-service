@@ -90,10 +90,15 @@ impl HostCom {
     }
 
     pub fn try_read_string() -> Result<Option<String>, MsgError> {
-        if let Some(frame) = Self::try_read_frame()? {
-            Ok(Some(String::from_utf8(frame.bytes).map_err(|_| Utf8)?))
-        } else {
+        let com = HOST_COM.lock();
+        let mut bytes = vec![];
+        while com.line_status() & 1 == 1 {
+            bytes.push(com.recv());
+        }
+        if bytes.is_empty() {
             Ok(None)
+        } else {
+            Ok(Some(String::from_utf8(bytes).map_err(|_| Utf8)?))
         }
     }
 
@@ -112,17 +117,23 @@ impl HostCom {
     ///
     /// If there is no data from the port, returns nothing. Otherwise,
     /// blocks until an entire frame is read or error occurs.
+    fn try_read_frame() -> Result<Option<Frame>, MsgError> {
+        // check if data is available, otherwise return early
+        if HOST_COM.lock().line_status() & 1 != 1 {
+            Ok(None)
+        } else {
+            Ok(Some(Self::get_frame()?))
+        }
+    }
+
+    /// Blocking method that reads a frame
     ///
     /// Uses an initial buffer with 1Kb in size. Dynamically increases the
     /// size of the frame buffer by 1Kb until either the message is decoded
     /// or an error occurs.
     ///
     /// Returns the raw framed bytes
-    fn try_read_frame() -> Result<Option<Frame>, MsgError> {
-        // check if data is available, otherwise return early
-        if HOST_COM.lock().line_status() & 1 != 1 {
-            return Ok(None)
-        }
+    fn get_frame() -> Result<Frame, MsgError> {
         // initial buffer size for the frame
         let mut buf_size = 1024;
         // initial buffer
@@ -132,7 +143,7 @@ impl HostCom {
         // a successful frame decoding or a decode error occurs.
         'outer: loop {
             // dynamically resize the frame buffer if necessary
-            let mut read_bytes =vec![0; buf_size];
+            let mut read_bytes = vec![0; buf_size];
             core::mem::swap(&mut read_bytes, &mut frame_buf);
             let mut decoder = cobs::CobsDecoder::new(&mut frame_buf);
             decoder.push(&read_bytes).expect("Previously read bytes should not produce a frame error.");
@@ -142,9 +153,9 @@ impl HostCom {
                     Ok(Some(len)) => {
                         let mut decoded = vec![];
                         decoded.copy_from_slice(&frame_buf[..len]);
-                        break 'outer Ok(Some(Frame { bytes: decoded }))
+                        break 'outer Ok(Frame { bytes: decoded })
                     }
-                    Err(cobs::DecodeError::TargetBufTooSmall) =>  {
+                    Err(cobs::DecodeError::TargetBufTooSmall) => {
                         // increase the buffer size ny 1Kb
                         buf_size += 1024;
                         break;
@@ -154,5 +165,4 @@ impl HostCom {
             }
         }
     }
-
 }

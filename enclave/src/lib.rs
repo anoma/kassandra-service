@@ -13,9 +13,9 @@ fn kernel_main() {
     HostCom::init();
     loop {
         if let Some(string) = HostCom::try_read_string().unwrap() {
-            println!("Received: {string}");
+            println!("Received: {}", string);
         }
         core::hint::spin_loop();
     }
-    exit_qemu(QemuExitCode::Sucess);
+    exit_qemu(QemuExitCode::Success);
 }

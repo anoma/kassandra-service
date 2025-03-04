@@ -3,4 +3,8 @@ build-enclave:
 	cd enclave && \
 	cargo osdk build
 
-.PHONY : build-enclave
+run-enclave:
+	cd enclave && \
+	cargo osdk run
+
+.PHONY : build-enclave run-enclave
