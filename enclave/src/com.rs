@@ -28,7 +28,7 @@ impl HostCom {
 
     /// Write to the host environment
     pub fn write(msg: MsgToHost) {
-        let mut com = HOST_COM.lock();
+        let mut com = Self;
         com.write_frame(&msg);
     }
 
@@ -74,12 +74,12 @@ impl HostCom {
     }
 
     fn get_frame() -> Result<Frame, MsgError> {
-        let mut com = HOST_COM.lock();
+        let mut com = Self;
         com.get_frame()
     }
 }
 
-impl ReadWriteByte for SerialPort {
+impl ReadWriteByte for HostCom {
     fn read_byte(&mut self) -> u8 {
         Self::read_byte()
     }
