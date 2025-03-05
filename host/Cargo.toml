@@ -4,4 +4,4 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-ostd = "0.11.1"
+ostd = "0.11.3"

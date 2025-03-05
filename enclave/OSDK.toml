@@ -14,6 +14,7 @@ args = """\
     -serial chardev:mux \
     -monitor chardev:mux \
     -chardev socket,id=serial2,host=0.0.0.0,port=12345,server=on,wait=off \
+    -device isa-serial,chardev=serial2 \
     -chardev stdio,id=mux,mux=on,signal=off \
     -display none \
     -device isa-debug-exit,iobase=0xf4,iosize=0x04 \

@@ -15,7 +15,7 @@ use crate::host::MsgError::Utf8;
 /// Messages to host environment
 #[derive(Clone, Serialize, Deserialize)]
 enum MsgToHost {
-    Error(alloc::string::String)
+    Error(String)
 }
 
 /// Messages from host environment
