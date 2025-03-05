@@ -1,3 +1,6 @@
+use alloc::string::String;
+use alloc::vec::{self, Vec};
+
 use cobs::CobsEncoder;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
