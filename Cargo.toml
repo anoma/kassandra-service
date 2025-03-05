@@ -4,4 +4,4 @@ resolver = "2"
 exclude = [
     "enclave"
 ]
-members = ["host"]
+members = ["host", "shared"]

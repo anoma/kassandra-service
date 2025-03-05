@@ -1,0 +1,10 @@
+[package]
+name = "shared"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cobs = { version = "0.3.0" , default-features = false }
+serde = { version = "1.0.218" , default-features = false, features = ["derive"]}
+serde_cbor = { version = "0.11.2", default-features = false, features = ["alloc"] }
+thiserror = {  version = "2.0.12" , default-features = false}

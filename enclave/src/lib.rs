@@ -1,19 +1,29 @@
 #![no_std]
 extern crate alloc;
-mod host;
+mod com;
 
+use crate::com::HostCom;
+use alloc::string::ToString;
 use ostd::arch::x86::qemu::{exit_qemu, QemuExitCode};
 use ostd::prelude::*;
-
-use crate::host::HostCom;
+use shared::MsgToHost;
 
 #[ostd::main]
 fn kernel_main() {
-    println!("Hello world from guest kernel!");
+    println!("Enclave kernel initialized!");
     HostCom::init();
     loop {
-        if let Some(string) = HostCom::try_read_string().unwrap() {
-            println!("Received: {}", string);
+        match HostCom::read() {
+            Ok(msg) => {
+                println!("Received msg: {:?}", msg);
+                HostCom::write(MsgToHost::Basic(
+                    "These are not the droids you're looking for.".to_string(),
+                ));
+            }
+            Err(e) => {
+                println!("Error reading message: {:?}", e);
+                HostCom::write(MsgToHost::Error(e.to_string()));
+            }
         }
         core::hint::spin_loop();
     }

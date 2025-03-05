@@ -7,4 +7,12 @@ run-enclave:
 	cd enclave && \
 	cargo osdk run
 
-.PHONY : build-enclave run-enclave
+build-host:
+	cargo build
+
+run-host:
+	cargo run
+
+build: build-enclave build-host
+
+.PHONY : build-enclave run-enclave build-host build run-host
