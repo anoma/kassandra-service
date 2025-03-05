@@ -79,7 +79,7 @@ impl HostCom {
     }
 }
 
-impl ReadWriteByte for HostCom {
+impl ReadWriteByte for SerialPort {
     fn read_byte(&mut self) -> u8 {
         Self::read_byte()
     }
