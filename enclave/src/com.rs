@@ -2,7 +2,6 @@
 
 use ostd::arch::x86::device::serial::SerialPort;
 use ostd::sync::Mutex;
-use serde::Deserialize;
 use shared::{Frame, FramedBytes, MsgError, MsgFromHost, MsgToHost, ReadWriteByte};
 
 /// A serial port for communicating with the host.

@@ -53,6 +53,7 @@ impl ReadWriteByte for Tcp {
     }
 
     fn write_bytes(&mut self, buf: &[u8]) {
-        self.raw.write_all(buf).unwrap()
+        self.raw.write_all(buf).unwrap();
+        self.raw.flush().unwrap();
     }
 }
