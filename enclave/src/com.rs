@@ -54,7 +54,7 @@ impl HostCom {
         while HOST_COM.lock().line_status() & 1 == 1{
             bytes.push(Self::read_byte());
         }
-        alloc::string::String::from_utf8(&bytes).map_err(MsgError::Utf8)
+        alloc::string::String::from_utf8(&bytes).map_err(|_| MsgError::Utf8(bytes))
     }
 
     /// Block until a byte is read

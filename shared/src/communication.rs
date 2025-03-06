@@ -26,8 +26,8 @@ pub enum MsgError {
     Decode(cobs::DecodeError),
     #[error("Failed to deserialize CBOR with: {0}")]
     Deserialize(serde_cbor::Error),
-    #[error("Input bytes were not valid utf-8")]
-    Utf8,
+    #[error("Input bytes were not valid utf-8: {0:?}")]
+    Utf8(Vec<u8>),
 }
 
 pub struct Frame {
