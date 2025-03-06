@@ -662,6 +662,7 @@ name = "shared"
 version = "0.1.0"
 dependencies = [
  "cobs",
+ "ostd",
  "serde",
  "serde_cbor",
  "thiserror",

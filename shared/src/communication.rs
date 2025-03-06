@@ -36,6 +36,7 @@ pub struct Frame {
 
 impl Frame {
     pub fn deserialize<T: DeserializeOwned>(self) -> Result<T, MsgError> {
+        ostd::prelude::println!("CBOR bytes: {:?}", self.bytes);
         serde_cbor::from_slice(&self.bytes).map_err(MsgError::Deserialize)
     }
 }
@@ -78,7 +79,7 @@ pub trait FramedBytes: ReadWriteByte {
                 match decoder.feed(self.read_byte()) {
                     Ok(None) => continue,
                     Ok(Some(len)) => {
-                        frame_buf.shrink_to(len - 1);
+                        frame_buf.shrink_to(len);
                         return Ok(Frame { bytes: frame_buf });
                     }
                     Err(cobs::DecodeError::TargetBufTooSmall) => {
