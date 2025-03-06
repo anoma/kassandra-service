@@ -49,7 +49,9 @@ impl ReadWriteByte for Tcp {
             self.buffered_read().unwrap();
             core::hint::spin_loop();
         }
-        self.buffered.pop().unwrap()
+        let b = self.buffered.pop().unwrap();
+        println!("Read byte {b}");
+        b
     }
 
     fn write_bytes(&mut self, buf: &[u8]) {
