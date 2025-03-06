@@ -36,7 +36,6 @@ pub struct Frame {
 
 impl Frame {
     pub fn deserialize<T: DeserializeOwned>(self) -> Result<T, MsgError> {
-        ostd::prelude::println!("CBOR bytes: {:?}", self.bytes);
         serde_cbor::from_slice(&self.bytes).map_err(MsgError::Deserialize)
     }
 }

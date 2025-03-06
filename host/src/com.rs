@@ -26,6 +26,7 @@ impl Tcp {
     /// Read a message sent from the enclave
     pub fn read(&mut self) -> Result<MsgToHost, MsgError> {
         let frame = self.get_frame()?;
+        println!("CBOR Bytes: {:?}", frame.bytes);
         frame.deserialize()
     }
 
