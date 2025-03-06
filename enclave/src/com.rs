@@ -1,5 +1,6 @@
 //! Tools for interacting with host environment
 
+use alloc::vec;
 use ostd::arch::x86::device::serial::SerialPort;
 use ostd::sync::Mutex;
 use shared::{Frame, FramedBytes, MsgError, MsgFromHost, MsgToHost, ReadWriteByte};
@@ -46,6 +47,14 @@ impl HostCom {
     pub fn read() -> Result<MsgFromHost, MsgError> {
         let frame = Self::get_frame()?;
         frame.deserialize()
+    }
+
+    pub fn read_string() -> Result<alloc::string::String, MsgError> {
+        let mut bytes = vec![];
+        while HOST_COM.lock().line_status() & 1 == 1{
+            bytes.push(Self::read_byte());
+        }
+        alloc::string::String::from_utf8(&bytes).map_err(MsgError::Utf8)
     }
 
     /// Block until a byte is read

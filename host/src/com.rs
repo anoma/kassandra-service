@@ -5,7 +5,7 @@ use std::net::TcpStream;
 use shared::{FramedBytes, MsgError, MsgFromHost, MsgToHost, ReadWriteByte};
 
 pub(crate) struct Tcp {
-    raw: TcpStream,
+    pub raw: TcpStream,
     buffered: Vec<u8>,
 }
 
