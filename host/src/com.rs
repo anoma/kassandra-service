@@ -26,7 +26,6 @@ impl Tcp {
     /// Read a message sent from the enclave
     pub fn read(&mut self) -> Result<MsgToHost, MsgError> {
         let frame = self.get_frame()?;
-        println!("CBOR Bytes: {:?}", frame.bytes);
         frame.deserialize()
     }
 
@@ -34,9 +33,10 @@ impl Tcp {
     /// The buffer is a stack, so the bytes are stored in
     /// reverse order that they are received.
     fn buffered_read(&mut self) -> io::Result<()> {
-        let mut buffered = vec![0; 1024];
+        let mut buffered = vec![0; 10];
         let len = self.raw.read(&mut buffered)?;
-        self.buffered = buffered[..len].to_vec();
+        buffered.truncate(len);
+        self.buffered = buffered;
         Ok(())
     }
 }

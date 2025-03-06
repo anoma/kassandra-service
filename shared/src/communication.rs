@@ -60,13 +60,13 @@ pub trait FramedBytes: ReadWriteByte {
     /// Returns the raw framed bytes
     fn get_frame(&mut self) -> Result<Frame, MsgError> {
         // initial buffer size for the frame
-        let mut buf_size = 1024;
+        let mut buf_size = 10;
         // initial buffer
         let mut frame_buf = Vec::<u8>::with_capacity(0);
 
         // continue trying to populate the frame buffer until
         // a successful frame decoding or a decode error occurs.
-        'outer: loop {
+        loop {
             // dynamically resize the frame buffer if necessary
             let mut read_bytes = vec![0; buf_size];
             core::mem::swap(&mut read_bytes, &mut frame_buf);

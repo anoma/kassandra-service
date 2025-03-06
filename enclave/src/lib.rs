@@ -13,7 +13,7 @@ fn kernel_main() {
     println!("Enclave kernel initialized!");
     HostCom::init();
     loop {
-        match HostCom::read_string() {
+        match HostCom::read() {
             Ok(msg) => {
                 println!("Received msg: {:?}", msg);
                 HostCom::write(MsgToHost::Basic(
