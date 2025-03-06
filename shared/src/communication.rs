@@ -41,6 +41,7 @@ impl Frame {
 
 /// A trait for getting the next byte in a byte stream
 pub trait ReadWriteByte {
+    const FRAME_BUF_SIZE: usize = 1024;
     fn read_byte(&mut self) -> u8;
 
     fn write_bytes(&mut self, buf: &[u8]);
@@ -59,22 +60,24 @@ pub trait FramedBytes: ReadWriteByte {
     /// Returns the raw framed bytes
     fn get_frame(&mut self) -> Result<Frame, MsgError> {
         // initial buffer size for the frame
-        let mut buf_size = 10;
-        // initial buffer
-        let mut frame_buf = Vec::<u8>::with_capacity(0);
-
+        let mut buf_size = Self::FRAME_BUF_SIZE;
+        // keep track of bytes processed so far incase we need to increase
+        // buffer size
+        let mut read_bytes = Vec::<u8>::with_capacity(buf_size);
         // continue trying to populate the frame buffer until
         // a successful frame decoding or a decode error occurs.
         loop {
-            // dynamically resize the frame buffer if necessary
-            let mut read_bytes = vec![0; buf_size];
-            core::mem::swap(&mut read_bytes, &mut frame_buf);
+            // initial buffer
+            let mut frame_buf = vec![0u8; buf_size];
             let mut decoder = cobs::CobsDecoder::new(&mut frame_buf);
             decoder
                 .push(&read_bytes)
                 .expect("Previously read bytes should not produce a frame error.");
+
             loop {
-                match decoder.feed(self.read_byte()) {
+                let b = self.read_byte();
+                read_bytes.push(b);
+                match decoder.feed(b) {
                     Ok(None) => continue,
                     Ok(Some(len)) => {
                         frame_buf.truncate(len);
@@ -82,12 +85,12 @@ pub trait FramedBytes: ReadWriteByte {
                     }
                     Err(cobs::DecodeError::TargetBufTooSmall) => {
                         // increase the buffer size ny 1Kb
-                        buf_size += 1024;
+                        buf_size += Self::FRAME_BUF_SIZE;
                         break;
                     }
                     Err(e) => return Err(MsgError::Decode(e)),
                 }
-            }
+            };
         }
     }
 
@@ -101,4 +104,41 @@ pub trait FramedBytes: ReadWriteByte {
     }
 }
 
-impl<T: ReadWriteByte> FramedBytes for T {}
+impl<T: ReadWriteByte> FramedBytes for T { }
+
+
+#[cfg(test)]
+mod tests {
+    use alloc::string::ToString;
+    use super::*;
+
+    struct MockChannel(Vec<u8>);
+
+    impl ReadWriteByte for MockChannel {
+        const FRAME_BUF_SIZE: usize = 10;
+        fn read_byte(&mut self) -> u8 {
+            self.0.remove(0)
+        }
+
+        fn write_bytes(&mut self, buf: &[u8]) {
+            self.0.extend_from_slice(buf);
+        }
+    }
+
+    /// Test that if the data we are decoding does not initially
+    /// fit into the frame buffer, we dynamically resize it until the
+    /// data fits and decoding is successful.
+    #[test]
+    fn test_dynamic_frame_resizing() {
+        let msg = MsgFromHost::Basic("Test".to_string());
+        let data = serde_cbor::to_vec(&msg).expect("Test failed");
+        let mut encoded = cobs::encode_vec_with_sentinel(&data, 0);
+        encoded.push(0);
+        let mut channel = MockChannel(encoded);
+        let frame = channel.get_frame().expect("Test failed");
+        let Ok(MsgFromHost::Basic(str)) = frame.deserialize() else {
+            panic!("Test failed");
+        };
+        assert_eq!(str, "Test");
+    }
+}
