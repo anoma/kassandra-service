@@ -78,7 +78,7 @@ pub trait FramedBytes: ReadWriteByte {
                 match decoder.feed(self.read_byte()) {
                     Ok(None) => continue,
                     Ok(Some(len)) => {
-                        frame_buf.shrink_to(len);
+                        frame_buf.truncate(len);
                         return Ok(Frame { bytes: frame_buf });
                     }
                     Err(cobs::DecodeError::TargetBufTooSmall) => {
