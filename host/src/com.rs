@@ -34,8 +34,7 @@ impl Tcp {
     /// reverse order that they are received.
     fn buffered_read(&mut self) -> io::Result<()> {
         let mut buffered = vec![];
-        self.raw.read_to_end(&mut buffered)?;
-        println!("{:?}", buffered);
+        self.raw.read(&mut buffered)?;
         buffered.reverse();
         std::mem::swap(&mut self.buffered, &mut buffered);
         Ok(())
