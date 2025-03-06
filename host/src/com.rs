@@ -35,7 +35,6 @@ impl Tcp {
     fn buffered_read(&mut self) -> io::Result<()> {
         let mut buffered = vec![0; 1024];
         let len = self.raw.read(&mut buffered)?;
-        println!("{:?}, {len}", buffered);
         self.buffered = buffered[..len].to_vec();
         Ok(())
     }
