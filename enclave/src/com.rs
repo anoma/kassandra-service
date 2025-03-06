@@ -21,8 +21,9 @@ impl HostCom {
 
     /// Write a buffer of bytes to the serial port
     pub fn write_bytes(buf: &[u8]) {
+        let com = HOST_COM.lock();
         for b in buf.iter().copied() {
-            HOST_COM.lock().send(b);
+           com.write_byte(b);
         }
     }
 
@@ -86,6 +87,25 @@ impl HostCom {
     fn get_frame() -> Result<Frame, MsgError> {
         let mut com = Self;
         com.get_frame()
+    }
+
+    fn write_byte(&self, data: u8)  {
+
+        const OUTPUT_EMPTY: u8 = 1 << 5;
+        match data {
+            8 | 0x7F => {
+                while self.line_status() & OUTPUT_EMPTY == 0 {}
+                self.send(8);
+                while self.line_status() & OUTPUT_EMPTY == 0 {}
+                self.send(b' ');
+                while self.line_status() & OUTPUT_EMPTY == 0 {}
+                self.send(8);
+            }
+            _ => {
+                while self.line_status() & OUTPUT_EMPTY == 0 {}
+                self.send(data);
+            }
+        }
     }
 }
 
