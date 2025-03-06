@@ -36,6 +36,7 @@ impl Tcp {
         let mut buffered = vec![0; 1014];
         self.raw.read(&mut buffered)?;
         buffered.reverse();
+        println!("{:?}", buffered);
         std::mem::swap(&mut self.buffered, &mut buffered);
         Ok(())
     }
