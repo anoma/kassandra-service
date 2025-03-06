@@ -24,7 +24,7 @@ impl HostCom {
     pub fn write_bytes(buf: &[u8]) {
         let com = HOST_COM.lock();
         for b in buf.iter().copied() {
-           Self::write_byte(com, b);
+           Self::write_byte(&com, b);
         }
     }
 
