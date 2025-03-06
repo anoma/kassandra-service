@@ -2,7 +2,7 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 
-use cobs::CobsEncoder;
+use cobs::{CobsEncoder, encode_with_sentinel};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -97,14 +97,9 @@ pub trait FramedBytes: ReadWriteByte {
     /// framed with COBS.
     fn write_frame<T: Serialize>(&mut self, msg: &T) {
         let data = serde_cbor::to_vec(&msg).unwrap();
-        let buf_size = cobs::max_encoding_length(data.len());
-        let mut frame_buf = vec![0u8; buf_size];
-        let mut encoder = CobsEncoder::new(&mut frame_buf);
-        encoder
-            .push(&data)
-            .expect("Encoding cannot exceed maximum size computed for message");
-        let size = encoder.finalize();
-        self.write_bytes(&frame_buf[..size]);
+        let mut encoded = cobs::encode_vec_with_sentinel(&data, 0);
+        encoded.push(0);
+        self.write_bytes(&encoded);
     }
 }
 
