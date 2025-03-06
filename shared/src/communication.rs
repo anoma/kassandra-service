@@ -78,9 +78,8 @@ pub trait FramedBytes: ReadWriteByte {
                 match decoder.feed(self.read_byte()) {
                     Ok(None) => continue,
                     Ok(Some(len)) => {
-                        let mut decoded = vec![];
-                        decoded.copy_from_slice(&frame_buf[..len]);
-                        break 'outer Ok(Frame { bytes: decoded });
+                        frame_buf.shrink_to(len);
+                        return Ok(Frame { bytes: frame_buf });
                     }
                     Err(cobs::DecodeError::TargetBufTooSmall) => {
                         // increase the buffer size ny 1Kb
