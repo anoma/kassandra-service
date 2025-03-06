@@ -51,10 +51,12 @@ impl HostCom {
 
     pub fn read_string() -> Result<alloc::string::String, MsgError> {
         let mut bytes = vec![];
-        while HOST_COM.lock().line_status() & 1 == 1{
-            bytes.push(Self::read_byte());
+        while bytes.is_empty() {
+            while HOST_COM.lock().line_status() & 1 == 1 {
+                bytes.push(Self::read_byte());
+            }
         }
-        alloc::string::String::from_utf8(&bytes).map_err(|_| MsgError::Utf8(bytes))
+        alloc::string::String::from_utf8(bytes.clone()).map_err(|_| MsgError::Utf8(bytes))
     }
 
     /// Block until a byte is read
