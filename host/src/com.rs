@@ -57,4 +57,3 @@ impl ReadWriteByte for Tcp {
         self.raw.flush().unwrap();
     }
 }
-

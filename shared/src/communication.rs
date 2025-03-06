@@ -2,7 +2,6 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 
-use cobs::{CobsEncoder, encode_with_sentinel};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
