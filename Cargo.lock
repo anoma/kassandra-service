@@ -21,6 +21,9 @@ checksum = "1b43ede17f21864e81be2fa654110bf1e793774238d86ef8555c37e6519c0403"
 name = "host"
 version = "0.0.1"
 dependencies = [
+ "cobs",
+ "serde",
+ "serde_cbor",
  "shared",
 ]
 

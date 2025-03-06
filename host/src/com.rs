@@ -25,7 +25,7 @@ impl Tcp {
 
     /// Read a message sent from the enclave
     pub fn read(&mut self) -> Result<MsgToHost, MsgError> {
-        let frame = self.get_frame()?;
+        let frame = self.get_ferm()?;
         frame.deserialize()
     }
 
@@ -38,6 +38,44 @@ impl Tcp {
         buffered.reverse();
         std::mem::swap(&mut self.buffered, &mut buffered);
         Ok(())
+    }
+
+    fn get_ferm(&mut self) -> Result<shared::Frame, MsgError> {
+        // initial buffer size for the frame
+        let mut buf_size = 1024;
+        // initial buffer
+        let mut frame_buf = Vec::<u8>::with_capacity(0);
+
+        // continue trying to populate the frame buffer until
+        // a successful frame decoding or a decode error occurs.
+        loop {
+            // dynamically resize the frame buffer if necessary
+            let mut read_bytes = vec![0; buf_size];
+            core::mem::swap(&mut read_bytes, &mut frame_buf);
+            let mut decoder = cobs::CobsDecoder::new(&mut frame_buf);
+            println!("Starting to read bytes");
+            decoder
+                .push(&read_bytes)
+                .expect("Previously read bytes should not produce a frame error.");
+            loop {
+                println!("Feeding decoder");
+                match decoder.feed(self.read_byte()) {
+                    Ok(None) => continue,
+                    Ok(Some(len)) => {
+                        let mut decoded = vec![];
+                        decoded.copy_from_slice(&frame_buf[..len]);
+                        return  Ok(shared::Frame { bytes: decoded });
+                    }
+                    Err(cobs::DecodeError::TargetBufTooSmall) => {
+                        println!("Uh oh, not enough bytes somehow");
+                        // increase the buffer size ny 1Kb
+                        buf_size += 1024;
+                        break;
+                    }
+                    Err(e) => return Err(MsgError::Decode(e)),
+                }
+            }
+        }
     }
 }
 
