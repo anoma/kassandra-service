@@ -35,6 +35,7 @@ impl Tcp {
     fn buffered_read(&mut self) -> io::Result<()> {
         let mut buffered = vec![];
         self.raw.read_to_end(&mut buffered)?;
+        println!("{:?}", buffered);
         buffered.reverse();
         std::mem::swap(&mut self.buffered, &mut buffered);
         Ok(())
@@ -50,7 +51,6 @@ impl ReadWriteByte for Tcp {
             core::hint::spin_loop();
         }
         let b = self.buffered.pop().unwrap();
-        println!("Read byte {b}");
         b
     }
 
