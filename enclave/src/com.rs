@@ -90,7 +90,7 @@ impl HostCom {
         com.get_frame()
     }
 
-    fn write_byte(com: impl Deref<SerialPort>, data: u8)  {
+    fn write_byte(com: impl Deref<Target=SerialPort>, data: u8)  {
         const OUTPUT_EMPTY: u8 = 1 << 5;
         match data {
             8 | 0x7F => {
