@@ -33,7 +33,7 @@ impl Tcp {
     /// The buffer is a stack, so the bytes are stored in
     /// reverse order that they are received.
     fn buffered_read(&mut self) -> io::Result<()> {
-        let mut buffered = vec![];
+        let mut buffered = vec![0; 1014];
         self.raw.read(&mut buffered)?;
         buffered.reverse();
         std::mem::swap(&mut self.buffered, &mut buffered);
