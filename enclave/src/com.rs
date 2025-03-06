@@ -1,6 +1,7 @@
 //! Tools for interacting with host environment
 
 use alloc::vec;
+use core::ops::Deref;
 use ostd::arch::x86::device::serial::SerialPort;
 use ostd::sync::Mutex;
 use shared::{Frame, FramedBytes, MsgError, MsgFromHost, MsgToHost, ReadWriteByte};
@@ -23,7 +24,7 @@ impl HostCom {
     pub fn write_bytes(buf: &[u8]) {
         let com = HOST_COM.lock();
         for b in buf.iter().copied() {
-           com.write_byte(b);
+           Self::write_byte(com, b);
         }
     }
 
@@ -89,21 +90,20 @@ impl HostCom {
         com.get_frame()
     }
 
-    fn write_byte(&self, data: u8)  {
-
+    fn write_byte(com: impl Deref<SerialPort>, data: u8)  {
         const OUTPUT_EMPTY: u8 = 1 << 5;
         match data {
             8 | 0x7F => {
-                while self.line_status() & OUTPUT_EMPTY == 0 {}
-                self.send(8);
-                while self.line_status() & OUTPUT_EMPTY == 0 {}
-                self.send(b' ');
-                while self.line_status() & OUTPUT_EMPTY == 0 {}
-                self.send(8);
+                while com.line_status() & OUTPUT_EMPTY == 0 {}
+                com.send(8);
+                while com.line_status() & OUTPUT_EMPTY == 0 {}
+                com.send(b' ');
+                while com.line_status() & OUTPUT_EMPTY == 0 {}
+                com.send(8);
             }
             _ => {
-                while self.line_status() & OUTPUT_EMPTY == 0 {}
-                self.send(data);
+                while com.line_status() & OUTPUT_EMPTY == 0 {}
+                com.send(data);
             }
         }
     }
