@@ -4,7 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+chacha20poly1305 = "0.10.1"
 cobs = { version = "0.3.0" , default-features = false, features = ["alloc"] }
-serde = { version = "1.0.218" , default-features = false, features = ["derive"]}
-serde_cbor = { version = "0.11.2", default-features = false, features = ["alloc"] }
-thiserror = {  version = "2.0.12" , default-features = false}
+fmd.workspace = true
+hex.workspace = true
+rand_core.workspace = true
+serde.workspace = true
+serde_cbor.workspace = true
+tdx-quote = { version = "0.0.3", default-features = false }
+thiserror.workspace = true
+x25519-dalek.workspace = true

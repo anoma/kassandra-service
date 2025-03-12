@@ -4,4 +4,14 @@ resolver = "2"
 exclude = [
     "enclave"
 ]
-members = ["host", "shared"]
+members = [ "client","host", "shared"]
+
+[workspace.dependencies]
+fmd = {package = "fuzzy-message-detection", path = "../shielded-state-sync/fuzzy-message-detection", features = ["serde"]} #git = "https://github.com/anoma/shielded-state-sync" }
+hex = { version = "0.4.3", default-features = false }
+rand_core = { version = "0.6", default-features = false }
+serde = { version = "1.0.218" , default-features = false, features = ["derive"]}
+serde_cbor = { version = "0.11.2", default-features = false, features = ["alloc"] }
+thiserror = {  version = "2.0.12" , default-features = false}
+tracing = "0.1.41"
+x25519-dalek = "2.0.1"

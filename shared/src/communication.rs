@@ -2,21 +2,128 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use crate::ratls::TlsCiphertext;
+use serde::de::{DeserializeOwned, Error};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
+
+#[derive(Debug, Copy, Clone)]
+pub struct HexBytes<const N: usize>(pub [u8; N]);
+
+impl<const N: usize> From<[u8; N]> for HexBytes<N> {
+    fn from(value: [u8; N]) -> Self {
+        Self(value)
+    }
+}
+
+macro_rules! impl_serde {
+    ($n:literal) => {
+        impl Serialize for HexBytes<$n> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where S: Serializer
+            {
+                serializer.serialize_str(&hex::encode(self.0))
+            }
+        }
+
+        impl<'de> Deserialize<'de> for HexBytes<$n> {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>
+            {
+                let s = String::deserialize(deserializer)?;
+                Ok(Self(
+                    hex::decode(s.as_bytes())
+                        .map_err(|_| Error::custom("Invalid hex"))?
+                        .try_into()
+                        .map_err(|_| Error::custom("Bytes were of wrong size"))?
+                ))
+            }
+        }
+    };
+}
+
+impl_serde!(32);
+impl_serde!(64);
 
 /// Messages to host environment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MsgToHost {
     Basic(String),
     Error(String),
+    ErrorForClient(String),
+    RATLS { report: Vec<u8> },
+    Report(Vec<u8>),
+    KeyRegSuccess,
 }
 
 /// Messages from host environment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MsgFromHost {
     Basic(String),
+    RegisterKey { nonce: u64, pk: HexBytes<32> },
+    RequestReport { user_data: HexBytes<64> },
+    RATLSAck(AckType),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ClientMsg {
+    /// Gives the clients public part of the shared key
+    /// and requests the enclaves part.
+    RegisterKey {
+        nonce: u64,
+        pk: HexBytes<32>,
+    },
+    RequestReport {
+        user_data: HexBytes<64>,
+    },
+    RATLSAck(AckType),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AckType {
+    Success(TlsCiphertext),
+    Fail,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ServerMsg {
+    /// The raw report bytes
+    RATLS {
+        report: Vec<u8>,
+    },
+    Error(String),
+    KeyRegSuccess,
+}
+
+impl<'a> TryFrom<&'a ClientMsg> for MsgFromHost {
+    type Error = &'static str;
+
+    fn try_from(msg: &'a ClientMsg) -> Result<Self, Self::Error> {
+        match msg {
+            ClientMsg::RegisterKey { nonce, pk } => Ok(MsgFromHost::RegisterKey {
+                nonce: *nonce,
+                pk: *pk,
+            }),
+            ClientMsg::RequestReport { user_data } => Ok(MsgFromHost::RequestReport {
+                user_data: *user_data,
+            }),
+            ClientMsg::RATLSAck(v) => Ok(MsgFromHost::RATLSAck(v.clone())),
+        }
+    }
+}
+
+impl TryFrom<MsgToHost> for ServerMsg {
+    type Error = &'static str;
+
+    fn try_from(msg: MsgToHost) -> Result<Self, &'static str> {
+        match msg {
+            MsgToHost::RATLS { report } => Ok(ServerMsg::RATLS { report }),
+            MsgToHost::ErrorForClient(err) => Ok(ServerMsg::Error(err)),
+            MsgToHost::KeyRegSuccess => Ok(ServerMsg::KeyRegSuccess),
+            _ => Err("Message not intended for client"),
+        }
+    }
 }
 
 #[derive(Error, Debug)]
@@ -90,7 +197,7 @@ pub trait FramedBytes: ReadWriteByte {
                     }
                     Err(e) => return Err(MsgError::Decode(e)),
                 }
-            };
+            }
         }
     }
 
@@ -104,13 +211,12 @@ pub trait FramedBytes: ReadWriteByte {
     }
 }
 
-impl<T: ReadWriteByte> FramedBytes for T { }
-
+impl<T: ReadWriteByte> FramedBytes for T {}
 
 #[cfg(test)]
 mod tests {
-    use alloc::string::ToString;
     use super::*;
+    use alloc::string::ToString;
 
     struct MockChannel(Vec<u8>);
 

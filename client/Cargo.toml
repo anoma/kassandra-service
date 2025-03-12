@@ -1,0 +1,18 @@
+[package]
+name = "client"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = ["tdx-quote/pck"]
+mock = ["tdx-quote/mock"]
+
+[dependencies]
+fmd.workspace = true
+hex = "0.4.3"
+rand_core.workspace = true
+serde_cbor.workspace = true
+shared = { path = "../shared" }
+tdx-quote = { version = "0.0.3", default-features = false }
+tracing.workspace = true
+x25519-dalek.workspace = true

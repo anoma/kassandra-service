@@ -1,7 +1,8 @@
 //! Tools for interacting with host environment
 
+use alloc::string::ToString;
 use alloc::vec;
-use core::ops::Deref;
+
 use ostd::arch::x86::device::serial::SerialPort;
 use ostd::sync::Mutex;
 use shared::{Frame, FramedBytes, MsgError, MsgFromHost, MsgToHost, ReadWriteByte};
@@ -24,7 +25,7 @@ impl HostCom {
     pub fn write_bytes(buf: &[u8]) {
         let com = HOST_COM.lock();
         for b in buf.iter().copied() {
-           Self::write_byte(&*com, b);
+            Self::write_byte(&*com, b);
         }
     }
 
@@ -32,6 +33,18 @@ impl HostCom {
     pub fn write(msg: MsgToHost) {
         let mut com = Self;
         com.write_frame(&msg);
+    }
+
+    /// A factory function for writing errors back
+    /// to the host.
+    pub fn write_err(err: &str) {
+        Self::write(MsgToHost::Error(err.to_string()))
+    }
+
+    /// A factory function for writing errors back
+    /// to a client.
+    pub fn write_client_err(err: &str) {
+        Self::write(MsgToHost::ErrorForClient(err.to_string()))
     }
 
     /// If data is available on the port, attempts to read it and
@@ -90,7 +103,7 @@ impl HostCom {
         com.get_frame()
     }
 
-    fn write_byte(com: &SerialPort, data: u8)  {
+    fn write_byte(com: &SerialPort, data: u8) {
         const OUTPUT_EMPTY: u8 = 1 << 5;
         match data {
             8 | 0x7F => {

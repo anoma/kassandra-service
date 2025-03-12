@@ -1,12 +1,15 @@
 #![no_std]
 extern crate alloc;
 mod com;
+mod ratls;
+mod report;
 
-use crate::com::HostCom;
 use alloc::string::ToString;
 use ostd::arch::x86::qemu::{exit_qemu, QemuExitCode};
 use ostd::prelude::*;
-use shared::MsgToHost;
+use shared::{MsgFromHost, MsgToHost};
+
+use crate::com::HostCom;
 
 #[ostd::main]
 fn kernel_main() {
@@ -16,9 +19,14 @@ fn kernel_main() {
         match HostCom::read() {
             Ok(msg) => {
                 println!("Received msg: {:?}", msg);
-                HostCom::write(MsgToHost::Basic(
-                    "These are not the droids you're looking for.".to_string(),
-                ));
+                match msg {
+                    MsgFromHost::RegisterKey { nonce, pk } => ratls::register_key(pk.0, nonce),
+                    MsgFromHost::RequestReport { user_data } => {
+                        let quote = report::get_quote(user_data.0);
+                        HostCom::write(MsgToHost::Report(quote.as_bytes()));
+                    }
+                    _ => {}
+                }
             }
             Err(e) => {
                 println!("Error reading message: {:?}", e);
