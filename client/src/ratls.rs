@@ -24,8 +24,7 @@ fn server_write(stream: &mut TcpStream, msg: &ClientMsg) {
 }
 
 /// Initialize a new TLS connection with the enclave.
-/// The handshake phase establishes a shared key via DHKE
-/// as well as session id.
+/// The handshake phase establishes a shared key via DHKE.
 ///
 /// The client also validates the Remote Attestation report
 /// provided by the enclave.

@@ -72,7 +72,7 @@ impl<'de> Deserialize<'de> for TlsCiphertext {
     }
 }
 
-/// A RA-TLS connection
+/// A simplified, bespoke RA-TLS connection
 /// It can be in two possible states:
 ///
 ///  * `Handshake` - initializing session between two parties
