@@ -100,7 +100,9 @@ impl Connection {
         match &self {
             Self::Handshake { ephemeral_key } => Ok(ClientMsg::RegisterKey {
                 nonce,
-                pk: x25519_dalek::PublicKey::from(ephemeral_key).to_bytes().into(),
+                pk: x25519_dalek::PublicKey::from(ephemeral_key)
+                    .to_bytes()
+                    .into(),
             }),
             Self::Initialized { .. } => Err(RatlsError::AlreadyInitialized),
         }

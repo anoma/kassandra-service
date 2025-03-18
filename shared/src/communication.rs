@@ -20,7 +20,8 @@ macro_rules! impl_serde {
     ($n:literal) => {
         impl Serialize for HexBytes<$n> {
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-            where S: Serializer
+            where
+                S: Serializer,
             {
                 serializer.serialize_str(&hex::encode(self.0))
             }
@@ -29,14 +30,14 @@ macro_rules! impl_serde {
         impl<'de> Deserialize<'de> for HexBytes<$n> {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
-                D: Deserializer<'de>
+                D: Deserializer<'de>,
             {
                 let s = String::deserialize(deserializer)?;
                 Ok(Self(
                     hex::decode(s.as_bytes())
                         .map_err(|_| Error::custom("Invalid hex"))?
                         .try_into()
-                        .map_err(|_| Error::custom("Bytes were of wrong size"))?
+                        .map_err(|_| Error::custom("Bytes were of wrong size"))?,
                 ))
             }
         }
