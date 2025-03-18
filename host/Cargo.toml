@@ -1,0 +1,9 @@
+[package]
+name = "host"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+serde_cbor.workspace = true
+shared = { path = "../shared" }
+tracing.workspace = true
