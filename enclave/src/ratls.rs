@@ -1,3 +1,12 @@
+//! All enclave methods callable directly by clients. This first
+//! requires establishing trust with the client about the enclave
+//! (remote attestation), and a Diffie-Hellman key exchange for
+//! secure communication.
+//!
+//! Currently, the only direct communication between enclaves and
+//! clients is registering clients' FMD detection keys with the
+//! enclave.
+
 use fmd::fmd2_compact::CompactSecretKey;
 use shared::ratls::Connection;
 use shared::tee::{EnclaveComm, EnclaveRNG, RemoteAttestation};

@@ -1,5 +1,7 @@
 //! These are the generic components for framing and serializing data passed
-//! between a host environment and an enclave.
+//! between the different service components. This is especially necessary between
+//! a host environment and an enclave as enclaves may be resource constrained, making
+//! higher level abstractions unavailable.
 
 use alloc::string::String;
 use alloc::vec;

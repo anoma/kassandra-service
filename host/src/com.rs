@@ -1,3 +1,5 @@
+//! Communication primitives for talking with enclavees and clients
+
 use std::io;
 use std::io::prelude::*;
 use std::net::TcpStream;

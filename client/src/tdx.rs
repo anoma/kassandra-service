@@ -1,3 +1,5 @@
+//! TDX specific implementation for verifying quotes
+
 use shared::tee::EnclaveClient;
 use tdx_quote::{Quote, QuoteParseError};
 use thiserror::Error;

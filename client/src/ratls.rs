@@ -1,3 +1,11 @@
+//! All client methods calling the enclave directly. This first
+//! requires establishing trust of the enclave (remote attestation),
+//! and a Diffie-Hellman key exchange for secure communication.
+//!
+//! Currently, the only direct communication between enclaves and
+//! clients is registering clients' FMD detection keys with the
+//! enclave.
+
 use std::io::{BufReader, Read, Write};
 use std::net::TcpStream;
 
