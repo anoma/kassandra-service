@@ -4,8 +4,8 @@ use std::net::TcpStream;
 use fmd::fmd2_compact::CompactSecretKey;
 use rand_core::{OsRng, RngCore};
 use shared::ratls::Connection;
+use shared::tee::EnclaveClient;
 use shared::{AckType, ClientMsg, ServerMsg};
-use tdx_quote::Quote;
 
 use crate::HOST_ADDRESS;
 
@@ -28,7 +28,7 @@ fn server_write(stream: &mut TcpStream, msg: &ClientMsg) {
 ///
 /// The client also validates the Remote Attestation report
 /// provided by the enclave.
-pub(crate) fn register_fmd_key(fmd_key: CompactSecretKey) {
+pub(crate) fn register_fmd_key<C: EnclaveClient>(fmd_key: CompactSecretKey) {
     // create client side connection
     let mut stream = TcpStream::connect(HOST_ADDRESS).unwrap();
     let mut rng = OsRng;
@@ -48,21 +48,16 @@ pub(crate) fn register_fmd_key(fmd_key: CompactSecretKey) {
             "Establishing RA-TLS connection failed: Could not parse service response as RA report."
         ),
     };
-    let quote = match Quote::from_bytes(&report) {
-        Ok(q) => q,
-        Err(e) => {
-            abort_tls(stream, &format!("Could not parse RA report: {e}"));
-        }
-    };
-    if !verify_quote(&quote, nonce) {
-        abort_tls(
+
+    let report_data = match C::verify_quote(&report, nonce) {
+        Ok(d) => d,
+        Err(e) => abort_tls(
             stream,
-            "Establishing RA-TLS connection failed: Invalid quote.",
-        );
-    }
+            &format!("Establishing RA-TLS connection failed: {e}"),
+        ),
+    };
 
     // Extract the signed ephemeral public key and session id
-    let report_data = quote.report_input_data();
     let pk_bytes = <[u8; 32]>::try_from(&report_data[0..32]).unwrap();
     let pk = x25519_dalek::PublicKey::from(pk_bytes);
 
@@ -94,50 +89,4 @@ pub(crate) fn register_fmd_key(fmd_key: CompactSecretKey) {
 fn abort_tls(mut stream: TcpStream, msg: &str) -> ! {
     server_write(&mut stream, &ClientMsg::RATLSAck(AckType::Fail));
     panic!("{}", msg);
-}
-
-/// TODO: Replace with real values
-const MRTD: &str = "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
-const RTMR0: &str = "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
-const RTMR1: &str = "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
-
-fn verify_quote(quote: &Quote, nonce: u64) -> bool {
-    let mrtd = hex::encode(quote.mrtd());
-    let rtmr0 = hex::encode(quote.rtmr0());
-    let rtmr1 = hex::encode(quote.rtmr1());
-    if mrtd != MRTD {
-        tracing::error!(
-            "Unexpected MRTD measurement. \n Wanted: {MRTD}\n Received: {}",
-            mrtd
-        );
-        return false;
-    }
-    if rtmr0 != RTMR0 {
-        tracing::error!(
-            "Unexpected RTMR0 measurement. \n Wanted: {RTMR0}\n Received: {}",
-            rtmr0
-        );
-        return false;
-    }
-    if rtmr1 != RTMR1 {
-        tracing::error!(
-            "Unexpected RTMR1 measurement. \n Wanted: {RTMR1}\n Received: {}",
-            rtmr1
-        );
-        return false;
-    }
-    #[cfg(feature = "default")]
-    if let Err(e) = quote.verify() {
-        tracing::error!("RA quote verification failed: {}", e.to_string());
-        return false;
-    }
-
-    let ra_nonce =
-        u64::from_le_bytes(<[u8; 8]>::try_from(&quote.report_input_data()[32..40]).unwrap());
-    if ra_nonce != nonce {
-        tracing::error!("RA quote contained a nonce different that the provided one.");
-        false
-    } else {
-        true
-    }
 }

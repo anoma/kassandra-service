@@ -1,7 +1,8 @@
 [package]
 name = "host"
+description = "The code that will run on the host environment hosting the enclave"
 version = "0.0.1"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 serde_cbor.workspace = true

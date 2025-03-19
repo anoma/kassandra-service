@@ -2,9 +2,9 @@
 resolver = "2"
 
 exclude = [
-    "enclave"
+    "tdx"
 ]
-members = [ "client","host", "shared"]
+members = [ "client", "enclave", "host", "shared"]
 
 [workspace.dependencies]
 fmd = {package = "fuzzy-message-detection", path = "../shielded-state-sync/fuzzy-message-detection", features = ["serde"]} #git = "https://github.com/anoma/shielded-state-sync" }

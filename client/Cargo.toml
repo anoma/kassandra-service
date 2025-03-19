@@ -1,11 +1,13 @@
 [package]
 name = "client"
-version = "0.1.0"
+description = "The code user's will use to interact with the service."
+version = "0.0.1"
 edition = "2024"
 
 [features]
-default = ["tdx-quote/pck"]
-mock = ["tdx-quote/mock"]
+default = ["tdx", "tdx-quote/pck"]
+tdx = ["tdx-quote"]
+mock = ["tdx", "tdx-quote/mock"]
 
 [dependencies]
 fmd.workspace = true
@@ -13,6 +15,7 @@ hex = "0.4.3"
 rand_core.workspace = true
 serde_cbor.workspace = true
 shared = { path = "../shared" }
-tdx-quote = { version = "0.0.3", default-features = false }
+tdx-quote = { version = "0.0.3", default-features = false, optional = true }
+thiserror.workspace = true
 tracing.workspace = true
 x25519-dalek.workspace = true

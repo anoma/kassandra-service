@@ -1,39 +1,63 @@
-#![no_std]
-extern crate alloc;
-mod com;
-mod ratls;
-mod report;
-
-use alloc::string::ToString;
-use ostd::arch::x86::qemu::{exit_qemu, QemuExitCode};
-use ostd::prelude::*;
+use shared::tee::{EnclaveComm, EnclaveRNG, RemoteAttestation};
 use shared::{MsgFromHost, MsgToHost};
 
-use crate::com::HostCom;
+#[derive(Clone)]
+struct Ctx<RA, COM, RNG>
+where
+    RA: RemoteAttestation,
+    COM: EnclaveComm,
+    RNG: EnclaveRNG,
+{
+    ra: RA,
+    com: COM,
+    rng: RNG,
+}
 
-#[ostd::main]
-fn kernel_main() {
-    println!("Enclave kernel initialized!");
-    HostCom::init();
+impl<RA, COM, RNG> Ctx<RA, COM, RNG>
+where
+    RA: RemoteAttestation,
+    COM: EnclaveComm,
+    RNG: EnclaveRNG,
+{
+    pub fn init() -> Self {
+        Self {
+            ra: RA::init(),
+            com: COM::init(),
+            rng: RNG::init(),
+        }
+    }
+}
+
+pub mod ratls;
+
+pub fn main<RA, COM, RNG>()
+where
+    RA: RemoteAttestation,
+    COM: EnclaveComm,
+    RNG: EnclaveRNG,
+{
+    let mut ctx = Ctx::<RA, COM, RNG>::init();
+
     loop {
-        match HostCom::read() {
+        match ctx.com.read() {
             Ok(msg) => {
                 println!("Received msg: {:?}", msg);
                 match msg {
-                    MsgFromHost::RegisterKey { nonce, pk } => ratls::register_key(pk.0, nonce),
+                    MsgFromHost::RegisterKey { nonce, pk } => {
+                        ratls::register_key(ctx.clone(), x25519_dalek::PublicKey::from(pk.0), nonce)
+                    }
                     MsgFromHost::RequestReport { user_data } => {
-                        let quote = report::get_quote(user_data.0);
-                        HostCom::write(MsgToHost::Report(quote.as_bytes()));
+                        let quote = ctx.ra.get_quote(user_data.0);
+                        ctx.com.write(&MsgToHost::Report(quote));
                     }
                     _ => {}
                 }
             }
             Err(e) => {
                 println!("Error reading message: {:?}", e);
-                HostCom::write(MsgToHost::Error(e.to_string()));
+                ctx.com.write(&MsgToHost::Error(e.to_string()));
             }
         }
         core::hint::spin_loop();
     }
-    exit_qemu(QemuExitCode::Success);
 }

@@ -1,28 +1,28 @@
 
-build-enclave:
-	cd enclave && \
+build-tdx:
+	cd tdx && \
 	cargo osdk build
 
-build-mock-enclave:
-	cd enclave && \
+build-mock-tdx:
+	cd tdx && \
 	cargo osdk build --features "mock"
 
-run-enclave:
-	cd enclave && \
+run-tdx:
+	cd tdx && \
 	cargo osdk run
 
-build-host:
+build:
 	cargo build
 
-build-mock-host:
+build-mock:
 	cargo build --no-default-features --features "client/mock"
 
 run-host:
 	cargo run
 
-build: build-enclave build-host
+tdx-all: build-tdx build
 
-build-mock: build-mock-enclave build-mock-host
+tdx-mock: build-mock-tdx build-mock
 
 fmt:
 	cargo fmt
@@ -30,6 +30,6 @@ fmt:
 
 clippy:
 	cargo clippy
-	cd enclave && cargo clippy
+	cd tdx && cargo clippy
 
-.PHONY : build build-mock fmt clippy
+.PHONY : tdx-all tdx-mock fmt clippy
