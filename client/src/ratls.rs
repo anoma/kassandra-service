@@ -88,7 +88,7 @@ pub(crate) fn register_fmd_key<C: EnclaveClient>(fmd_key: CompactSecretKey) {
 
     // wait for response from server if entire procedure was successful
     match server_read(&mut stream) {
-        Some(ServerMsg::KeyRegSuccess) => tracing::info!("Key registered succesfully"),
+        Some(ServerMsg::KeyRegSuccess) => tracing::info!("Key registered successfully"),
         Some(ServerMsg::Error(msg)) => tracing::error!("Key registration failed: {msg}"),
         _ => tracing::error!("Received unexpected message from service"),
     }

@@ -7,6 +7,8 @@
 //! clients is registering clients' FMD detection keys with the
 //! enclave.
 
+use alloc::format;
+
 use fmd::fmd2_compact::CompactSecretKey;
 use shared::ratls::Connection;
 use shared::tee::{EnclaveComm, EnclaveRNG, RemoteAttestation};
@@ -18,12 +20,15 @@ use crate::Ctx;
 /// connections.
 ///
 /// Creates a Remote Attestation report which signs over its ephemeral
-/// public key and a session id. This is sent to the client for verification
+/// public key and a challenge nonce. This is sent to the client for verification.
+/// Upon success, the secure channel is used to send an FMD key to the enclave
+/// to be stored.
 pub(crate) fn register_key<RA, COM, RNG>(
     mut ctx: Ctx<RA, COM, RNG>,
     pk: x25519_dalek::PublicKey,
     nonce: u64,
-) where
+) -> Option<CompactSecretKey>
+where
     RA: RemoteAttestation,
     COM: EnclaveComm,
     RNG: EnclaveRNG,
@@ -42,7 +47,7 @@ pub(crate) fn register_key<RA, COM, RNG>(
     } else {
         ctx.com
             .write_client_err("Failed to initialize TLS connection.");
-        return;
+        return None;
     };
 
     // generate Remote Attestation report
@@ -63,20 +68,20 @@ pub(crate) fn register_key<RA, COM, RNG>(
     // wait for acknowledgement from the client
     let Ok(MsgFromHost::RATLSAck(ack)) = ctx.com.read() else {
         ctx.com.write_err("Received unexpected message");
-        return;
+        return None;
     };
     let AckType::Success(cipher) = ack else {
-        return;
+        return None;
     };
-    let fmd_key: CompactSecretKey = match conn.decrypt_msg(&cipher) {
+    match conn.decrypt_msg(&cipher) {
         Ok(key) => {
             ctx.com.write(&MsgToHost::KeyRegSuccess);
-            key
+            Some(key)
         }
         Err(e) => {
             ctx.com
                 .write_client_err(&format!("Error receiving fmd key: {e}"));
-            return;
+            None
         }
-    };
+    }
 }

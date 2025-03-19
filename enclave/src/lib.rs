@@ -1,3 +1,8 @@
+#![no_std]
+extern crate alloc;
+
+use alloc::string::ToString;
+use alloc::vec::Vec;
 use shared::tee::{EnclaveComm, EnclaveRNG, RemoteAttestation};
 use shared::{MsgFromHost, MsgToHost};
 
@@ -37,14 +42,20 @@ where
     RNG: EnclaveRNG,
 {
     let mut ctx = Ctx::<RA, COM, RNG>::init();
+    let mut registered_keys = Vec::new();
 
     loop {
         match ctx.com.read() {
             Ok(msg) => {
-                println!("Received msg: {:?}", msg);
                 match msg {
                     MsgFromHost::RegisterKey { nonce, pk } => {
-                        ratls::register_key(ctx.clone(), x25519_dalek::PublicKey::from(pk.0), nonce)
+                        if let Some(key) = ratls::register_key(
+                            ctx.clone(),
+                            x25519_dalek::PublicKey::from(pk.0),
+                            nonce,
+                        ) {
+                            registered_keys.push(key);
+                        }
                     }
                     MsgFromHost::RequestReport { user_data } => {
                         let quote = ctx.ra.get_quote(user_data.0);
@@ -54,7 +65,6 @@ where
                 }
             }
             Err(e) => {
-                println!("Error reading message: {:?}", e);
                 ctx.com.write(&MsgToHost::Error(e.to_string()));
             }
         }

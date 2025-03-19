@@ -54,7 +54,14 @@ fn handle_connection(mut client_conn: TcpStream, enclave_conn: &mut Tcp) -> std:
 }
 
 /// A simplified TLS designed to send an encrypted secret FMD detection key from
-/// a client to the enclave. This requires a two-step handshake.
+/// a client to the enclave. It is a multi-round protocol as follows:
+///
+/// * Client initiates with public DH key and challenge nonce
+/// * Enclave replies with a signed Attestation Report whose user data contains the
+///   challenge nonce and its public DH key.
+/// * The client verifies the report and sends back an FMD key encrypted with the shared
+///   key
+/// * The enclave sends and acknowledgement of receipt
 fn handle_key_registration(mut client_conn: TcpStream, enclave_conn: &mut Tcp, msg: MsgFromHost) {
     // if we cannot complete the TLS setup for any reason, send a
     // failing acknowledgement to the enclave so that it can drop the
@@ -66,7 +73,7 @@ fn handle_key_registration(mut client_conn: TcpStream, enclave_conn: &mut Tcp, m
             return
         };
     }
-
+    // The first communication round (RA and DHKE)
     enclave_conn.write(msg);
     match enclave_conn.read() {
         Ok(msg) => {
@@ -93,6 +100,24 @@ fn handle_key_registration(mut client_conn: TcpStream, enclave_conn: &mut Tcp, m
                 enclave_conn.write(MsgFromHost::RATLSAck(val));
             } else {
                 error!("Received an unexpected message from the client");
+                abort_tls!();
+            }
+        }
+        Err(e) => error!("Error receiving message from enclave: {e}"),
+    }
+    // Handle the final acknowledgement round
+    match enclave_conn.read() {
+        Ok(msg) => {
+            info!("Received message: {:?}", msg);
+            // This should be an success message or an enclave error
+            // intended for the client.
+            if let Ok(resp) = ServerMsg::try_from(msg) {
+                let resp = serde_cbor::to_vec(&resp).unwrap();
+                if client_conn.write_all(&resp).is_err() {
+                    abort_tls!();
+                }
+            } else {
+                error!("Received an unexpected message from the enclave");
                 abort_tls!();
             }
         }
