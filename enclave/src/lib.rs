@@ -46,24 +46,20 @@ where
 
     loop {
         match ctx.com.read() {
-            Ok(msg) => {
-                match msg {
-                    MsgFromHost::RegisterKey { nonce, pk } => {
-                        if let Some(key) = ratls::register_key(
-                            ctx.clone(),
-                            x25519_dalek::PublicKey::from(pk.0),
-                            nonce,
-                        ) {
-                            registered_keys.push(key);
-                        }
+            Ok(msg) => match msg {
+                MsgFromHost::RegisterKey { nonce, pk } => {
+                    if let Some(key) =
+                        ratls::register_key(ctx.clone(), x25519_dalek::PublicKey::from(pk.0), nonce)
+                    {
+                        registered_keys.push(key);
                     }
-                    MsgFromHost::RequestReport { user_data } => {
-                        let quote = ctx.ra.get_quote(user_data.0);
-                        ctx.com.write(&MsgToHost::Report(quote));
-                    }
-                    _ => {}
                 }
-            }
+                MsgFromHost::RequestReport { user_data } => {
+                    let quote = ctx.ra.get_quote(user_data.0);
+                    ctx.com.write(&MsgToHost::Report(quote));
+                }
+                _ => {}
+            },
             Err(e) => {
                 ctx.com.write(&MsgToHost::Error(e.to_string()));
             }
