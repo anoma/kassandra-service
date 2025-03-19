@@ -1,13 +1,13 @@
 //! Tools for interacting with host environment
-
-use alloc::string::ToString;
 use alloc::vec;
 
 use ostd::arch::x86::device::serial::SerialPort;
 use ostd::sync::Mutex;
 use shared::{Frame, FramedBytes, MsgError, MsgFromHost, MsgToHost, ReadWriteByte};
+use shared::tee::EnclaveComm;
 
 /// A serial port for communicating with the host.
+#[derive(Copy, Clone)]
 pub struct HostCom;
 
 static HOST_COM: Mutex<SerialPort> = Mutex::new(
@@ -18,7 +18,7 @@ static HOST_COM: Mutex<SerialPort> = Mutex::new(
 impl HostCom {
     /// Initialize the connection
     pub fn init() {
-        HOST_COM.lock().init();
+
     }
 
     /// Write a buffer of bytes to the serial port
@@ -27,24 +27,6 @@ impl HostCom {
         for b in buf.iter().copied() {
             Self::write_byte(&*com, b);
         }
-    }
-
-    /// Write to the host environment
-    pub fn write(msg: MsgToHost) {
-        let mut com = Self;
-        com.write_frame(&msg);
-    }
-
-    /// A factory function for writing errors back
-    /// to the host.
-    pub fn write_err(err: &str) {
-        Self::write(MsgToHost::Error(err.to_string()))
-    }
-
-    /// A factory function for writing errors back
-    /// to a client.
-    pub fn write_client_err(err: &str) {
-        Self::write(MsgToHost::ErrorForClient(err.to_string()))
     }
 
     /// If data is available on the port, attempts to read it and
@@ -56,12 +38,6 @@ impl HostCom {
         } else {
             Ok(None)
         }
-    }
-
-    /// Blocking read method to get a message form the host.
-    pub fn read() -> Result<MsgFromHost, MsgError> {
-        let frame = Self::get_frame()?;
-        frame.deserialize()
     }
 
     pub fn read_string() -> Result<alloc::string::String, MsgError> {
@@ -129,5 +105,21 @@ impl ReadWriteByte for HostCom {
 
     fn write_bytes(&mut self, buf: &[u8]) {
         Self::write_bytes(buf)
+    }
+}
+
+impl EnclaveComm for HostCom {
+    fn init() -> Self {
+        HOST_COM.lock().init();
+    }
+
+    fn read(&mut self) -> Result<MsgFromHost, MsgError> {
+        let frame = Self::get_frame()?;
+        frame.deserialize()
+    }
+
+    fn write(&mut self, msg: &MsgToHost) {
+        let mut com = Self;
+        com.write_frame(&msg);
     }
 }

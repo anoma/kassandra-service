@@ -1,3 +1,6 @@
+//! These are the generic components for framing and serializing data passed
+//! between a host environment and an enclave.
+
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
