@@ -24,7 +24,6 @@ pub trait RemoteAttestation: Clone {
 
 /// High level methods for the enclave to communicate with
 /// its host and clients.
-
 pub trait EnclaveComm: FramedBytes + Clone {
     /// Instantiate the communication channel
     fn init() -> Self;

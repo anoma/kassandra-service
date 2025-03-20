@@ -15,8 +15,6 @@ use shared::ratls::Connection;
 use shared::tee::EnclaveClient;
 use shared::{AckType, ClientMsg, ServerMsg};
 
-use crate::HOST_ADDRESS;
-
 /// Read message from server
 fn server_read(stream: &mut TcpStream) -> Option<ServerMsg> {
     let mut buf_reader = BufReader::new(stream);
@@ -36,10 +34,9 @@ fn server_write(stream: &mut TcpStream, msg: &ClientMsg) {
 ///
 /// The client also validates the Remote Attestation report
 /// provided by the enclave.
-pub(crate) fn register_fmd_key<C: EnclaveClient>(fmd_key: CompactSecretKey) {
-    // create client side connection
-    let mut stream = TcpStream::connect(HOST_ADDRESS).unwrap();
+pub(crate) fn register_fmd_key<C: EnclaveClient>(url: &str, fmd_key: CompactSecretKey) {
     let mut rng = OsRng;
+    let mut stream = TcpStream::connect(url).unwrap();
     let conn = Connection::new(&mut rng);
 
     // create a nonce for replay protection
