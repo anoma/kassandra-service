@@ -5,9 +5,11 @@ version = "0.0.1"
 edition = "2024"
 
 [features]
-default = ["tdx", "tdx-quote/pck"]
+default = ["transparent"]
+tdx-full = ["tdx", "tdx-quote/pck"]
 tdx = ["tdx-quote"]
 mock = ["tdx", "tdx-quote/mock"]
+transparent = []
 
 [dependencies]
 clap = { version = "4.5.32", features = ["derive"] }

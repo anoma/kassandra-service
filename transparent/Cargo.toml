@@ -1,11 +1,11 @@
 [package]
-name = "host"
-description = "The code that will run on the host environment hosting the enclave"
-version = "0.0.1"
+name = "transparent"
+version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-serde_cbor.workspace = true
+enclave = {package = "fmd-enclave-service", path = "../enclave" }
+rand_core.workspace = true
 shared = { path = "../shared", features = ["std"] }
 tracing.workspace = true
 tracing-log.workspace = true

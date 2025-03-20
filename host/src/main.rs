@@ -1,13 +1,10 @@
-mod com;
-
 use std::io::{BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::time::Duration;
 
+use shared::tcp::Tcp;
 use shared::{AckType, ClientMsg, MsgFromHost, MsgToHost, ServerMsg};
 use tracing::{error, info};
-
-use crate::com::Tcp;
 
 const ENCLAVE_ADDRESS: &str = "0.0.0.0:12345";
 const LISTENING_ADDRESS: &str = "0.0.0.0:666";
@@ -128,6 +125,7 @@ fn handle_key_registration(mut client_conn: TcpStream, enclave_conn: &mut Tcp, m
 
 fn main() -> std::io::Result<()> {
     init_logging();
+    info!("Kassandra service started.");
     let mut enclave_connection = Tcp::new(ENCLAVE_ADDRESS)?;
     let listener = TcpListener::bind(LISTENING_ADDRESS)?;
     for stream in listener.incoming().flatten() {

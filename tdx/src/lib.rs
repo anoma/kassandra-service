@@ -1,9 +1,11 @@
+//! A TDX implementation of the FMD detection portion of the Kassandra service
+
 #![no_std]
 extern crate alloc;
 mod com;
 
 use alloc::string::ToString;
-
+use alloc::vec::Vec;
 use ostd::arch::x86::qemu::{exit_qemu, QemuExitCode};
 use ostd::prelude::*;
 use shared::{MsgFromHost, MsgToHost};
@@ -28,14 +30,14 @@ impl RemoteAttestation for Tdx {
     }
 
     #[cfg(feature = "mock")]
-    fn get_quote(&self, report_data: [u8; 64]) -> Quote {
+    fn get_quote(&self, report_data: [u8; 64]) -> Vec<u8> {
         let attestation_key = SigningKey::from_slice(&[1; 32]).unwrap();
         let pck_key = SigningKey::from_slice(&[2; 32]).unwrap();
-        Quote::mock(attestation_key, pck_key, report_data, alloc::vec![])
+        Quote::mock(attestation_key, pck_key, report_data, alloc::vec![]).as_bytes()
     }
 
     #[cfg(not(feature = "mock"))]
-    fn get_quote(&self, report_data: [u8; 64]) -> Quote {
+    fn get_quote(&self, report_data: [u8; 64]) -> Vec<u8> {
         todo!()
     }
 }

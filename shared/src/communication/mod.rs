@@ -3,6 +3,9 @@
 //! a host environment and an enclave as enclaves may be resource constrained, making
 //! higher level abstractions unavailable.
 
+#[cfg(feature = "std")]
+pub mod tcp;
+
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;

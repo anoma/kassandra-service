@@ -1,11 +1,14 @@
-use crate::ratls::register_fmd_key;
 use clap::{Parser, Subcommand};
 use tracing_subscriber::fmt::SubscriberBuilder;
+
+use crate::ratls::register_fmd_key;
 
 mod ratls;
 
 #[cfg(feature = "tdx")]
 mod tdx;
+#[cfg(feature = "transparent")]
+mod transparent;
 
 #[derive(Parser)]
 #[command(version, about, long_about=None)]
@@ -40,6 +43,8 @@ fn main() {
             let fmd_key = serde_json::from_str(key).unwrap();
             #[cfg(feature = "tdx")]
             register_fmd_key::<tdx::TdxClient>(&cli.url, fmd_key);
+            #[cfg(feature = "transparent")]
+            register_fmd_key::<transparent::TClient>(&cli.url, fmd_key);
         }
     }
 }

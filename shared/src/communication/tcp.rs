@@ -1,14 +1,27 @@
-//! Communication primitives for talking with enclavees and clients
+//! A TCP based implementation of the Kassandra service communication protocol
 
-use std::io;
 use std::io::prelude::*;
 use std::net::TcpStream;
+use std::prelude::rust_2024::Vec;
+use std::{io, vec};
 
-use shared::{FramedBytes, MsgError, MsgFromHost, MsgToHost, ReadWriteByte};
+use crate::tee::EnclaveComm;
+use crate::{FramedBytes, MsgError, MsgFromHost, MsgToHost, ReadWriteByte};
 
-pub(crate) struct Tcp {
+const ENCLAVE_ADDRESS: &str = "0.0.0.0:12345";
+
+pub struct Tcp {
     pub raw: TcpStream,
     buffered: Vec<u8>,
+}
+
+impl Clone for Tcp {
+    fn clone(&self) -> Self {
+        Self {
+            raw: self.raw.try_clone().unwrap(),
+            buffered: self.buffered.clone(),
+        }
+    }
 }
 
 impl Tcp {
@@ -57,5 +70,11 @@ impl ReadWriteByte for Tcp {
     fn write_bytes(&mut self, buf: &[u8]) {
         self.raw.write_all(buf).unwrap();
         self.raw.flush().unwrap();
+    }
+}
+
+impl EnclaveComm for Tcp {
+    fn init() -> Self {
+        Tcp::new(ENCLAVE_ADDRESS).unwrap()
     }
 }
