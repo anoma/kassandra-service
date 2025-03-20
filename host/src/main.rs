@@ -1,9 +1,10 @@
 mod com;
 
-use shared::{AckType, ClientMsg, MsgFromHost, MsgToHost, ServerMsg};
 use std::io::{BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::time::Duration;
+
+use shared::{AckType, ClientMsg, MsgFromHost, MsgToHost, ServerMsg};
 use tracing::{error, info};
 
 use crate::com::Tcp;
@@ -126,6 +127,7 @@ fn handle_key_registration(mut client_conn: TcpStream, enclave_conn: &mut Tcp, m
 }
 
 fn main() -> std::io::Result<()> {
+    init_logging();
     let mut enclave_connection = Tcp::new(ENCLAVE_ADDRESS)?;
     let listener = TcpListener::bind(LISTENING_ADDRESS)?;
     for stream in listener.incoming().flatten() {
@@ -136,4 +138,10 @@ fn main() -> std::io::Result<()> {
     }
 
     Ok(())
+}
+
+fn init_logging() {
+    tracing_subscriber::fmt::SubscriberBuilder::default()
+        .with_ansi(true)
+        .init();
 }

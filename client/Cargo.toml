@@ -1,6 +1,6 @@
 [package]
 name = "client"
-description = "The code user's will use to interact with the service."
+description = "Interact with an FMD service"
 version = "0.0.1"
 edition = "2024"
 
@@ -10,12 +10,16 @@ tdx = ["tdx-quote"]
 mock = ["tdx", "tdx-quote/mock"]
 
 [dependencies]
-fmd.workspace = true
+clap = { version = "4.5.32", features = ["derive"] }
+fmd  = { workspace = true, features = ["serde"] }
 hex = "0.4.3"
 rand_core.workspace = true
 serde_cbor.workspace = true
+serde_json = { version = "1.0.140", default-features = false, features = ["alloc"] }
 shared = { path = "../shared" }
 tdx-quote = { version = "0.0.3", default-features = false, optional = true }
 thiserror.workspace = true
 tracing.workspace = true
+tracing-log.workspace = true
+tracing-subscriber.workspace = true
 x25519-dalek.workspace = true

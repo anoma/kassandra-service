@@ -6,14 +6,14 @@
 
 use alloc::vec::Vec;
 
-use crate::{ClientMsg, MsgFromHost, MsgToHost};
 use chacha20poly1305::aead::Aead;
 use chacha20poly1305::{AeadCore, ChaCha20Poly1305, Key, KeyInit, Nonce};
 use rand_core::{CryptoRng, RngCore};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use tdx_quote::QuoteParseError;
 use thiserror::Error;
+
+use crate::{ClientMsg, MsgToHost};
 
 #[derive(Error, Debug)]
 pub enum RatlsError {
