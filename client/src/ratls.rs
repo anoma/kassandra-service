@@ -5,29 +5,12 @@
 //! Currently, the only direct communication between enclaves and
 //! clients is registering clients' FMD detection keys with the
 //! enclave.
-
-use std::io::{BufReader, Read, Write};
-use std::net::TcpStream;
-
+use crate::com::OutgoingTcp;
 use fmd::fmd2_compact::CompactSecretKey;
 use rand_core::{OsRng, RngCore};
 use shared::ratls::Connection;
 use shared::tee::EnclaveClient;
 use shared::{AckType, ClientMsg, ServerMsg};
-
-/// Read message from server
-fn server_read(stream: &mut TcpStream) -> Option<ServerMsg> {
-    let mut buf_reader = BufReader::new(stream);
-    let mut req_bytes = vec![];
-    buf_reader.read_to_end(&mut req_bytes).ok()?;
-    serde_cbor::from_slice(&req_bytes).ok()
-}
-
-/// Write message to server
-fn server_write(stream: &mut TcpStream, msg: &ClientMsg) {
-    let msg = serde_cbor::to_vec(msg).unwrap();
-    stream.write_all(&msg).unwrap();
-}
 
 /// Initialize a new TLS connection with the enclave.
 /// The handshake phase establishes a shared key via DHKE.
@@ -36,19 +19,19 @@ fn server_write(stream: &mut TcpStream, msg: &ClientMsg) {
 /// provided by the enclave.
 pub(crate) fn register_fmd_key<C: EnclaveClient>(url: &str, fmd_key: CompactSecretKey) {
     let mut rng = OsRng;
-    let mut stream = TcpStream::connect(url).unwrap();
+    let mut stream = OutgoingTcp::new(url);
     let conn = Connection::new(&mut rng);
 
     // create a nonce for replay protection
     let nonce = rng.next_u64();
 
     // initiate handshake with enclave
-    server_write(&mut stream, &conn.client_send(nonce).unwrap());
+    stream.write(conn.client_send(nonce).unwrap());
 
     // validate remote attestation certificates
-    let report = match server_read(&mut stream) {
-        Some(ServerMsg::RATLS { report }) => report,
-        Some(ServerMsg::Error(err)) => panic!("{err}"),
+    let report = match stream.read() {
+        Ok(ServerMsg::RATLS { report }) => report,
+        Ok(ServerMsg::Error(err)) => panic!("{err}"),
         _ => panic!(
             "Establishing RA-TLS connection failed: Could not parse service response as RA report."
         ),
@@ -81,17 +64,17 @@ pub(crate) fn register_fmd_key<C: EnclaveClient>(url: &str, fmd_key: CompactSecr
     let cipher = conn
         .encrypt_msg(&serde_cbor::to_vec(&fmd_key).unwrap(), &mut rng)
         .unwrap();
-    server_write(&mut stream, &ClientMsg::RATLSAck(AckType::Success(cipher)));
+    stream.write(ClientMsg::RATLSAck(AckType::Success(cipher)));
 
     // wait for response from server if entire procedure was successful
-    match server_read(&mut stream) {
-        Some(ServerMsg::KeyRegSuccess) => tracing::info!("Key registered successfully"),
-        Some(ServerMsg::Error(msg)) => tracing::error!("Key registration failed: {msg}"),
+    match stream.read() {
+        Ok(ServerMsg::KeyRegSuccess) => tracing::info!("Key registered successfully"),
+        Ok(ServerMsg::Error(msg)) => tracing::error!("Key registration failed: {msg}"),
         _ => tracing::error!("Received unexpected message from service"),
     }
 }
 
-fn abort_tls(mut stream: TcpStream, msg: &str) -> ! {
-    server_write(&mut stream, &ClientMsg::RATLSAck(AckType::Fail));
+fn abort_tls(mut stream: OutgoingTcp, msg: &str) -> ! {
+    stream.write(ClientMsg::RATLSAck(AckType::Fail));
     panic!("{}", msg);
 }

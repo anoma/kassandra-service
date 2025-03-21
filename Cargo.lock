@@ -1078,6 +1078,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "transparent"
+version = "0.1.0"
+dependencies = [
+ "fmd-enclave-service",
+ "rand_core",
+ "shared",
+ "tracing",
+ "tracing-log",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "typenum"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

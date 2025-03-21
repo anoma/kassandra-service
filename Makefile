@@ -17,8 +17,11 @@ build:
 build-mock:
 	cargo build --no-default-features --features "client/mock"
 
+run-enclave:
+	cargo run --bin transparent
+
 run-host:
-	cargo run
+	cargo run --bin host
 
 tdx-all: build-tdx build
 
