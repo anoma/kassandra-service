@@ -17,6 +17,9 @@ build:
 build-mock:
 	cargo build --no-default-features --features "client/mock"
 
+run-enclave:
+	cargo run --bin transparent
+
 run-host:
 	cargo run --bin host
 

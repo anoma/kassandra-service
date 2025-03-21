@@ -1,10 +1,8 @@
 //! An implementation of the FMD detection portion of the Kassandra service that
 //! does not run in a TEE.
 
-mod com;
-
-use crate::com::Tcp;
 use rand_core::{CryptoRng, Error, OsRng, RngCore};
+use shared::tcp::Tcp;
 use shared::tee::{EnclaveRNG, RemoteAttestation};
 
 fn main() {

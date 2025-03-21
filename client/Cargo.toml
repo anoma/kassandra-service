@@ -18,7 +18,7 @@ hex = "0.4.3"
 rand_core.workspace = true
 serde_cbor.workspace = true
 serde_json = { version = "1.0.140", default-features = false, features = ["alloc"] }
-shared = { path = "../shared" }
+shared = { path = "../shared", features = ["std"] }
 tdx-quote = { version = "0.0.3", default-features = false, optional = true }
 thiserror.workspace = true
 tracing.workspace = true

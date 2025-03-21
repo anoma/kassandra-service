@@ -1,18 +1,19 @@
 //! Communication primitives for talking with hosts
 
-use std::io;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
+use std::prelude::rust_2024::Vec;
+use std::{io, vec};
 
-use shared::ReadWriteByte;
-use shared::tee::EnclaveComm;
+use crate::ReadWriteByte;
+use crate::tee::EnclaveComm;
 
 const ENCLAVE_ADDRESS: &str = "0.0.0.0:12345";
 
 /// A TCP stream connected with the host
 /// **NOT THREAD SAFE**
 pub struct Tcp {
-    raw: TcpStream,
+    pub raw: TcpStream,
     buffered: Vec<u8>,
 }
 
@@ -26,9 +27,16 @@ impl Clone for Tcp {
 }
 
 impl Tcp {
+    /// Create a new connection from a stream
+    pub fn new(stream: TcpStream) -> Self {
+        Self {
+            raw: stream,
+            buffered: vec![],
+        }
+    }
     /// Listen for a connection request from the host. Once
     /// received, return the stream.
-    pub fn new(url: &str) -> io::Result<Self> {
+    pub fn connect(url: &str) -> io::Result<Self> {
         let listener = TcpListener::bind(url)?;
         loop {
             if let Some(Ok(stream)) = listener.incoming().next() {
@@ -71,6 +79,6 @@ impl ReadWriteByte for Tcp {
 
 impl EnclaveComm for Tcp {
     fn init() -> Self {
-        Self::new(ENCLAVE_ADDRESS).unwrap()
+        Self::connect(ENCLAVE_ADDRESS).unwrap()
     }
 }

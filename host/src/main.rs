@@ -1,31 +1,22 @@
 mod com;
 
-use std::io::{BufReader, Read, Write};
-use std::net::{TcpListener, TcpStream};
+use std::net::TcpListener;
 use std::time::Duration;
 
 use shared::{AckType, ClientMsg, MsgFromHost, MsgToHost, ServerMsg};
 use tracing::{error, info};
 
-use crate::com::Tcp;
+use crate::com::{IncomingTcp, Tcp};
 
 const ENCLAVE_ADDRESS: &str = "0.0.0.0:12345";
 const LISTENING_ADDRESS: &str = "0.0.0.0:666";
 
-fn client_read(client_conn: &mut TcpStream) -> Option<ClientMsg> {
-    let mut buf_reader = BufReader::new(client_conn);
-    let mut req_bytes = vec![];
-    buf_reader.read_to_end(&mut req_bytes).ok()?;
-    if let Ok(msg) = serde_cbor::from_slice::<ClientMsg>(&req_bytes) {
-        Some(msg)
-    } else {
-        error!("Error deserializing client request: {:?}", req_bytes);
-        None
-    }
+fn client_read(client_conn: &mut IncomingTcp) -> Option<ClientMsg> {
+    client_conn.read().ok()
 }
 
 /// Handle a client request and issue a response.
-fn handle_connection(mut client_conn: TcpStream, enclave_conn: &mut Tcp) -> std::io::Result<()> {
+fn handle_connection(mut client_conn: IncomingTcp, enclave_conn: &mut Tcp) -> std::io::Result<()> {
     let Some(req) = client_read(&mut client_conn) else {
         return Ok(());
     };
@@ -41,8 +32,7 @@ fn handle_connection(mut client_conn: TcpStream, enclave_conn: &mut Tcp) -> std:
                     } else {
                         info!("Received message: {:?}", msg);
                         if let Ok(resp) = ServerMsg::try_from(msg) {
-                            let resp = serde_cbor::to_vec(&resp).unwrap();
-                            client_conn.write_all(&resp)?;
+                            client_conn.write(resp);
                         }
                     }
                 }
@@ -63,7 +53,7 @@ fn handle_connection(mut client_conn: TcpStream, enclave_conn: &mut Tcp) -> std:
 /// * The client verifies the report and sends back an FMD key encrypted with the shared
 ///   key
 /// * The enclave sends and acknowledgement of receipt
-fn handle_key_registration(mut client_conn: TcpStream, enclave_conn: &mut Tcp, msg: MsgFromHost) {
+fn handle_key_registration(mut client_conn: IncomingTcp, enclave_conn: &mut Tcp, msg: MsgFromHost) {
     // if we cannot complete the TLS setup for any reason, send a
     // failing acknowledgement to the enclave so that it can drop the
     // connection.
@@ -82,10 +72,7 @@ fn handle_key_registration(mut client_conn: TcpStream, enclave_conn: &mut Tcp, m
             // This should be the attestation report or an enclave error
             // intended for the client.
             if let Ok(resp) = ServerMsg::try_from(msg) {
-                let resp = serde_cbor::to_vec(&resp).unwrap();
-                if client_conn.write_all(&resp).is_err() {
-                    abort_tls!();
-                }
+                client_conn.write(resp);
             } else {
                 error!("Received an unexpected message from the enclave");
                 abort_tls!();
@@ -110,13 +97,10 @@ fn handle_key_registration(mut client_conn: TcpStream, enclave_conn: &mut Tcp, m
     match enclave_conn.read() {
         Ok(msg) => {
             info!("Received message: {:?}", msg);
-            // This should be an success message or an enclave error
+            // This should be a success message or an enclave error
             // intended for the client.
             if let Ok(resp) = ServerMsg::try_from(msg) {
-                let resp = serde_cbor::to_vec(&resp).unwrap();
-                if client_conn.write_all(&resp).is_err() {
-                    abort_tls!();
-                }
+                client_conn.write(resp);
             } else {
                 error!("Received an unexpected message from the enclave");
                 abort_tls!();
@@ -130,10 +114,13 @@ fn main() -> std::io::Result<()> {
     init_logging();
     info!("Kassandra service started.");
     let mut enclave_connection = Tcp::new(ENCLAVE_ADDRESS)?;
+    info!("Connected to enclave");
     let listener = TcpListener::bind(LISTENING_ADDRESS)?;
     for stream in listener.incoming().flatten() {
-        stream.set_read_timeout(Some(Duration::new(5, 0))).unwrap();
-        if let Err(e) = handle_connection(stream, &mut enclave_connection) {
+        info!("Received connection...");
+        let mut incoming = IncomingTcp::new(stream);
+        incoming.set_read_timeout(Duration::new(5, 0));
+        if let Err(e) = handle_connection(incoming, &mut enclave_connection) {
             error!("Error handling client request: {e}");
         }
     }

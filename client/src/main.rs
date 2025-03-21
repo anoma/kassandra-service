@@ -5,6 +5,7 @@ use crate::ratls::register_fmd_key;
 
 mod ratls;
 
+mod com;
 #[cfg(feature = "tdx")]
 mod tdx;
 #[cfg(feature = "transparent")]
@@ -51,4 +52,20 @@ fn main() {
 
 fn init_logging() {
     SubscriberBuilder::default().with_ansi(true).init();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fmd::FmdKeyGen;
+    use fmd::fmd2_compact::MultiFmd2CompactScheme;
+
+    #[test]
+    fn generate_fmd_key() {
+        let mut csprng = rand_core::OsRng;
+        let mut compact_multi_fmd2 = MultiFmd2CompactScheme::new(12, 1);
+        let (cmp_sk, _) = compact_multi_fmd2.generate_keys(&mut csprng);
+        let sk = serde_json::to_string(&cmp_sk).unwrap();
+        panic!("Secret key: {sk}");
+    }
 }
