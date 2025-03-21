@@ -1,10 +1,13 @@
+mod com;
+
 use std::io::{BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::time::Duration;
 
-use shared::tcp::Tcp;
 use shared::{AckType, ClientMsg, MsgFromHost, MsgToHost, ServerMsg};
 use tracing::{error, info};
+
+use crate::com::Tcp;
 
 const ENCLAVE_ADDRESS: &str = "0.0.0.0:12345";
 const LISTENING_ADDRESS: &str = "0.0.0.0:666";

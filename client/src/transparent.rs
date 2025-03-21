@@ -5,7 +5,7 @@ use crate::transparent::VerifyError::UserData;
 
 #[derive(Error, Debug)]
 pub enum VerifyError {
-    #[error("User datat was not 64 bytes")]
+    #[error("User data was not 64 bytes")]
     UserData,
 }
 #[derive(Copy, Clone)]

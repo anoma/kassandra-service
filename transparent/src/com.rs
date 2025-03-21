@@ -1,17 +1,18 @@
-//! A TCP based implementation of the Kassandra service communication protocol
+//! Communication primitives for talking with hosts
 
+use std::io;
 use std::io::prelude::*;
-use std::net::TcpStream;
-use std::prelude::rust_2024::Vec;
-use std::{io, vec};
+use std::net::{TcpListener, TcpStream};
 
-use crate::tee::EnclaveComm;
-use crate::{FramedBytes, MsgError, MsgFromHost, MsgToHost, ReadWriteByte};
+use shared::ReadWriteByte;
+use shared::tee::EnclaveComm;
 
 const ENCLAVE_ADDRESS: &str = "0.0.0.0:12345";
 
+/// A TCP stream connected with the host
+/// **NOT THREAD SAFE**
 pub struct Tcp {
-    pub raw: TcpStream,
+    raw: TcpStream,
     buffered: Vec<u8>,
 }
 
@@ -25,23 +26,18 @@ impl Clone for Tcp {
 }
 
 impl Tcp {
-    /// Create a new stream
+    /// Listen for a connection request from the host. Once
+    /// received, return the stream.
     pub fn new(url: &str) -> io::Result<Self> {
-        Ok(Self {
-            raw: TcpStream::connect(url)?,
-            buffered: Default::default(),
-        })
-    }
-
-    /// Send a [`MsgFromHost`] into the enclave
-    pub fn write(&mut self, msg: MsgFromHost) {
-        self.write_frame(&msg);
-    }
-
-    /// Read a message sent from the enclave
-    pub fn read(&mut self) -> Result<MsgToHost, MsgError> {
-        let frame = self.get_frame()?;
-        frame.deserialize()
+        let listener = TcpListener::bind(url)?;
+        loop {
+            if let Some(Ok(stream)) = listener.incoming().next() {
+                break Ok(Self {
+                    raw: stream,
+                    buffered: Default::default(),
+                });
+            }
+        }
     }
 
     /// Read data from the stream into an internal buffer.
@@ -75,6 +71,6 @@ impl ReadWriteByte for Tcp {
 
 impl EnclaveComm for Tcp {
     fn init() -> Self {
-        Tcp::new(ENCLAVE_ADDRESS).unwrap()
+        Self::new(ENCLAVE_ADDRESS).unwrap()
     }
 }

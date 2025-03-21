@@ -18,7 +18,7 @@ build-mock:
 	cargo build --no-default-features --features "client/mock"
 
 run-host:
-	cargo run
+	cargo run --bin host
 
 tdx-all: build-tdx build
 

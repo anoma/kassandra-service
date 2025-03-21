@@ -4,9 +4,6 @@ description = "Logic and types shared between multiple components of the service
 version = "0.0.1"
 edition = "2024"
 
-[features]
-std = []
-
 [dependencies]
 chacha20poly1305 = "0.10.1"
 cobs = { version = "0.3.0" , default-features = false, features = ["alloc"] }
