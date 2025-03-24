@@ -1,9 +1,9 @@
 mod com;
 
+use shared::{AckType, ClientMsg, MsgFromHost, MsgToHost, ServerMsg};
 use std::net::TcpListener;
 use std::time::Duration;
-
-use shared::{AckType, ClientMsg, MsgFromHost, MsgToHost, ServerMsg};
+use tokio::select;
 use tracing::{error, info};
 
 use crate::com::{IncomingTcp, Tcp};
@@ -11,18 +11,30 @@ use crate::com::{IncomingTcp, Tcp};
 const ENCLAVE_ADDRESS: &str = "0.0.0.0:12345";
 const LISTENING_ADDRESS: &str = "0.0.0.0:666";
 
-fn client_read(client_conn: &mut IncomingTcp) -> Option<ClientMsg> {
-    client_conn.read().ok()
+const CLIENT_TIMEOUT: u64 = 1;
+
+/// Try to read from a connection to a client. Times out if message is not
+/// received within time.
+async fn client_read(client_conn: &IncomingTcp) -> Option<ClientMsg> {
+    let mut conn = client_conn.clone();
+    let read = tokio::spawn(async move { conn.read().ok() });
+    select! {
+        _ = tokio::time::sleep(Duration::from_secs(CLIENT_TIMEOUT)) => None,
+        val = read => val.ok().flatten()
+    }
 }
 
 /// Handle a client request and issue a response.
-fn handle_connection(mut client_conn: IncomingTcp, enclave_conn: &mut Tcp) -> std::io::Result<()> {
-    let Some(req) = client_read(&mut client_conn) else {
+async fn handle_connection(
+    mut client_conn: IncomingTcp,
+    enclave_conn: &mut Tcp,
+) -> std::io::Result<()> {
+    let Some(req) = client_read(&client_conn).await else {
         return Ok(());
     };
     if let Ok(msg) = MsgFromHost::try_from(&req) {
         if let MsgFromHost::RegisterKey { .. } = msg {
-            handle_key_registration(client_conn, enclave_conn, msg);
+            handle_key_registration(client_conn, enclave_conn, msg).await;
         } else {
             enclave_conn.write(msg);
             match enclave_conn.read() {
@@ -53,7 +65,11 @@ fn handle_connection(mut client_conn: IncomingTcp, enclave_conn: &mut Tcp) -> st
 /// * The client verifies the report and sends back an FMD key encrypted with the shared
 ///   key
 /// * The enclave sends and acknowledgement of receipt
-fn handle_key_registration(mut client_conn: IncomingTcp, enclave_conn: &mut Tcp, msg: MsgFromHost) {
+async fn handle_key_registration(
+    mut client_conn: IncomingTcp,
+    enclave_conn: &mut Tcp,
+    msg: MsgFromHost,
+) {
     // if we cannot complete the TLS setup for any reason, send a
     // failing acknowledgement to the enclave so that it can drop the
     // connection.
@@ -79,7 +95,7 @@ fn handle_key_registration(mut client_conn: IncomingTcp, enclave_conn: &mut Tcp,
             }
 
             // read the client's response
-            let Some(req) = client_read(&mut client_conn) else {
+            let Some(req) = client_read(&client_conn).await else {
                 abort_tls!();
             };
 
@@ -110,7 +126,8 @@ fn handle_key_registration(mut client_conn: IncomingTcp, enclave_conn: &mut Tcp,
     }
 }
 
-fn main() -> std::io::Result<()> {
+#[tokio::main]
+async fn main() -> std::io::Result<()> {
     init_logging();
     info!("Kassandra service started.");
     let mut enclave_connection = Tcp::new(ENCLAVE_ADDRESS)?;
@@ -118,9 +135,8 @@ fn main() -> std::io::Result<()> {
     let listener = TcpListener::bind(LISTENING_ADDRESS)?;
     for stream in listener.incoming().flatten() {
         info!("Received connection...");
-        let mut incoming = IncomingTcp::new(stream);
-        incoming.set_read_timeout(Duration::new(5, 0));
-        if let Err(e) = handle_connection(incoming, &mut enclave_connection) {
+        let incoming = IncomingTcp::new(stream);
+        if let Err(e) = handle_connection(incoming, &mut enclave_connection).await {
             error!("Error handling client request: {e}");
         }
     }
