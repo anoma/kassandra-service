@@ -4,7 +4,6 @@ use shared::{ClientMsg, FramedBytes, MsgError, MsgFromHost, MsgToHost, ReadWrite
 use std::io;
 use std::io::prelude::*;
 use std::net::TcpStream;
-use std::time::Duration;
 
 pub(crate) struct Tcp {
     pub raw: TcpStream,
@@ -60,6 +59,7 @@ impl ReadWriteByte for Tcp {
     }
 }
 
+#[derive(Clone)]
 pub(crate) struct IncomingTcp(shared::tcp::Tcp);
 
 impl IncomingTcp {
@@ -77,10 +77,6 @@ impl IncomingTcp {
     pub fn read(&mut self) -> Result<ClientMsg, MsgError> {
         let frame = self.get_frame()?;
         frame.deserialize()
-    }
-
-    pub fn set_read_timeout(&mut self, dur: Duration) {
-        self.0.raw.set_read_timeout(Some(dur)).unwrap()
     }
 }
 
