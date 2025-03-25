@@ -1,5 +1,6 @@
-use shared::{ClientMsg, FramedBytes, MsgError, ReadWriteByte, ServerMsg};
 use std::net::TcpStream;
+
+use shared::{ClientMsg, FramedBytes, MsgError, ReadWriteByte, ServerMsg};
 
 pub(crate) struct OutgoingTcp(shared::tcp::Tcp);
 

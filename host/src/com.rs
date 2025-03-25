@@ -1,9 +1,11 @@
 //! Communication primitives for talking with enclavees and clients
 
-use shared::{ClientMsg, FramedBytes, MsgError, MsgFromHost, MsgToHost, ReadWriteByte, ServerMsg};
 use std::io;
 use std::io::prelude::*;
 use std::net::TcpStream;
+use std::time::Duration;
+
+use shared::{ClientMsg, FramedBytes, MsgError, MsgFromHost, MsgToHost, ReadWriteByte, ServerMsg};
 
 pub(crate) struct Tcp {
     pub raw: TcpStream,
@@ -60,12 +62,18 @@ impl ReadWriteByte for Tcp {
 }
 
 #[derive(Clone)]
-pub(crate) struct IncomingTcp(shared::tcp::Tcp);
+pub(crate) struct IncomingTcp {
+    raw: shared::tcp::Tcp,
+    timeout: Duration,
+}
 
 impl IncomingTcp {
     /// Create a new connection from a stream
-    pub fn new(stream: TcpStream) -> Self {
-        Self(shared::tcp::Tcp::new(stream))
+    pub fn new(stream: TcpStream, timeout: Duration) -> Self {
+        Self {
+            raw: shared::tcp::Tcp::new(stream),
+            timeout,
+        }
     }
 
     /// Send a [`MsgFromHost`] into the enclave
@@ -78,14 +86,25 @@ impl IncomingTcp {
         let frame = self.get_frame()?;
         frame.deserialize()
     }
+
+    /// Try to read from a connection to a client. Times out if message is not
+    /// received within time.
+    pub async fn timed_read(&mut self) -> Option<Result<ClientMsg, MsgError>> {
+        let mut conn = self.clone();
+        let read = tokio::spawn(async move { conn.read() });
+        tokio::select! {
+            _ = tokio::time::sleep(self.timeout) => None,
+            val = read => Some(val.ok()).flatten()
+        }
+    }
 }
 
 impl ReadWriteByte for IncomingTcp {
     fn read_byte(&mut self) -> u8 {
-        self.0.read_byte()
+        self.raw.read_byte()
     }
 
     fn write_bytes(&mut self, buf: &[u8]) {
-        self.0.write_bytes(buf)
+        self.raw.write_bytes(buf)
     }
 }

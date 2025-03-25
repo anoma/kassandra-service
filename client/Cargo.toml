@@ -12,7 +12,7 @@ mock = ["tdx", "tdx-quote/mock"]
 transparent = []
 
 [dependencies]
-clap = { version = "4.5.32", features = ["derive"] }
+clap.workspace = true
 fmd  = { workspace = true, features = ["serde"] }
 hex = "0.4.3"
 rand_core.workspace = true
