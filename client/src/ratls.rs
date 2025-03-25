@@ -5,12 +5,13 @@
 //! Currently, the only direct communication between enclaves and
 //! clients is registering clients' FMD detection keys with the
 //! enclave.
-use crate::com::OutgoingTcp;
 use fmd::fmd2_compact::CompactSecretKey;
 use rand_core::{OsRng, RngCore};
 use shared::ratls::Connection;
 use shared::tee::EnclaveClient;
 use shared::{AckType, ClientMsg, ServerMsg};
+
+use crate::com::OutgoingTcp;
 
 /// Initialize a new TLS connection with the enclave.
 /// The handshake phase establishes a shared key via DHKE.

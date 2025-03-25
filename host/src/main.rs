@@ -1,27 +1,59 @@
 mod com;
+mod config;
+mod db;
 
-use shared::{AckType, ClientMsg, MsgFromHost, MsgToHost, ServerMsg};
 use std::net::TcpListener;
-use std::time::Duration;
-use tokio::select;
+
+use clap::Parser;
+use shared::{AckType, ClientMsg, MsgFromHost, MsgToHost, ServerMsg};
 use tracing::{error, info};
 
 use crate::com::{IncomingTcp, Tcp};
+use crate::config::Config;
+use crate::db::DB;
 
-const ENCLAVE_ADDRESS: &str = "0.0.0.0:12345";
-const LISTENING_ADDRESS: &str = "0.0.0.0:666";
+#[derive(Parser, Clone)]
+#[command(version, about, long_about=None)]
+struct Cli {
+    #[arg(long, value_name = "URL", help = "URL to talk the enclave")]
+    enclave: Option<String>,
+    #[arg(
+        short,
+        long,
+        value_name = "PORT",
+        help = "Port on which to list for client requests"
+    )]
+    listen: Option<String>,
+    #[arg(
+        long,
+        value_name = "MILLISECONDS",
+        help = "How long to wait on client responses before timing out"
+    )]
+    listen_timeout: Option<u64>,
+    #[arg(long, value_name = "URL", help = "URL of a masp indexer.")]
+    indexer_url: Option<String>,
+}
 
-const CLIENT_TIMEOUT: u64 = 1;
+#[tokio::main]
+async fn main() -> std::io::Result<()> {
+    init_logging();
+    let cli = Cli::parse();
+    let config = Config::load_or_init(cli);
+    let db = DB::new().unwrap();
 
-/// Try to read from a connection to a client. Times out if message is not
-/// received within time.
-async fn client_read(client_conn: &IncomingTcp) -> Option<ClientMsg> {
-    let mut conn = client_conn.clone();
-    let read = tokio::spawn(async move { conn.read().ok() });
-    select! {
-        _ = tokio::time::sleep(Duration::from_secs(CLIENT_TIMEOUT)) => None,
-        val = read => val.ok().flatten()
+    info!("Kassandra service started.");
+    let mut enclave_connection = Tcp::new(&config.enclave_url)?;
+    info!("Connected to enclave");
+    let listener = TcpListener::bind(&config.listen_url)?;
+    for stream in listener.incoming().flatten() {
+        info!("Received connection...");
+        let incoming = IncomingTcp::new(stream, config.listen_timeout);
+        if let Err(e) = handle_connection(incoming, &mut enclave_connection).await {
+            error!("Error handling client request: {e}");
+        }
     }
+
+    Ok(())
 }
 
 /// Handle a client request and issue a response.
@@ -29,8 +61,13 @@ async fn handle_connection(
     mut client_conn: IncomingTcp,
     enclave_conn: &mut Tcp,
 ) -> std::io::Result<()> {
-    let Some(req) = client_read(&client_conn).await else {
-        return Ok(());
+    let req = match client_conn.timed_read().await {
+        Some(Ok(req)) => req,
+        Some(Err(e)) => {
+            error!("Error receiving message from client: {e}");
+            return Ok(());
+        }
+        None => return Ok(()),
     };
     if let Ok(msg) = MsgFromHost::try_from(&req) {
         if let MsgFromHost::RegisterKey { .. } = msg {
@@ -95,8 +132,15 @@ async fn handle_key_registration(
             }
 
             // read the client's response
-            let Some(req) = client_read(&client_conn).await else {
-                abort_tls!();
+            let req = match client_conn.timed_read().await {
+                Some(Ok(req)) => req,
+                Some(Err(e)) => {
+                    error!("Error receiving message from client: {e}");
+                    abort_tls!();
+                }
+                None => {
+                    abort_tls!();
+                }
             };
 
             // send an acknowledgement back to the enclave
@@ -124,24 +168,6 @@ async fn handle_key_registration(
         }
         Err(e) => error!("Error receiving message from enclave: {e}"),
     }
-}
-
-#[tokio::main]
-async fn main() -> std::io::Result<()> {
-    init_logging();
-    info!("Kassandra service started.");
-    let mut enclave_connection = Tcp::new(ENCLAVE_ADDRESS)?;
-    info!("Connected to enclave");
-    let listener = TcpListener::bind(LISTENING_ADDRESS)?;
-    for stream in listener.incoming().flatten() {
-        info!("Received connection...");
-        let incoming = IncomingTcp::new(stream);
-        if let Err(e) = handle_connection(incoming, &mut enclave_connection).await {
-            error!("Error handling client request: {e}");
-        }
-    }
-
-    Ok(())
 }
 
 fn init_logging() {

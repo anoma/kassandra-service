@@ -10,10 +10,11 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 
-use crate::ratls::TlsCiphertext;
 use serde::de::{DeserializeOwned, Error};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
+
+use crate::ratls::TlsCiphertext;
 
 #[derive(Debug, Copy, Clone)]
 pub struct HexBytes<const N: usize>(pub [u8; N]);
