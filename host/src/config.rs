@@ -14,15 +14,22 @@ const CONFIG_FILE: &str = "config.toml";
 const ENCLAVE_ADDRESS: &str = "0.0.0.0:12345";
 const KASSANDRA_DIR: &str = ".kassandra";
 const LISTENING_ADDRESS: &str = "0.0.0.0:666";
+const MAX_WAL_SIZE: usize = 1000;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub enclave_url: String,
     pub listen_url: String,
     pub listen_timeout: Duration,
+    pub db: DbConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DbConfig {
     #[serde(serialize_with = "serialize_url")]
     #[serde(deserialize_with = "deserialize_url")]
     pub indexer_url: reqwest::Url,
+    pub max_wal_size: usize,
 }
 
 impl Config {
@@ -46,7 +53,10 @@ impl Config {
                 .listen_timeout
                 .map(Duration::from_millis)
                 .unwrap_or_else(|| Duration::from_secs(CLIENT_TIMEOUT)),
-            indexer_url: reqwest::Url::from_str(ix_url).unwrap(),
+            db: DbConfig {
+                indexer_url: reqwest::Url::from_str(ix_url).unwrap(),
+                max_wal_size: cli.max_wal_size.unwrap_or(MAX_WAL_SIZE),
+            },
         })
     }
 
@@ -68,7 +78,10 @@ impl Config {
                     conf.listen_timeout = Duration::from_millis(t);
                 }
                 if let Some(idx) = cli.indexer_url {
-                    conf.indexer_url = reqwest::Url::from_str(&idx).unwrap();
+                    conf.db.indexer_url = reqwest::Url::from_str(&idx).unwrap();
+                }
+                if let Some(wal) = cli.max_wal_size {
+                    conf.db.max_wal_size = wal;
                 }
                 conf.save().unwrap();
                 conf

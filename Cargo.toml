@@ -7,7 +7,10 @@ exclude = [
 members = [ "client", "enclave", "host", "shared", "transparent"]
 
 [workspace.dependencies]
+borsh = "1.2"
 clap = { version = "4.5.32", features = ["derive"] }
+eyre = "0.6.12"
+flume = "0.11.1"
 fmd = {package = "fuzzy-message-detection", path = "../shielded-state-sync/fuzzy-message-detection", features = ["serde"]} #git = "https://github.com/anoma/shielded-state-sync" }
 hex = { version = "0.4.3", default-features = false }
 home = "0.5.11"

@@ -2,65 +2,94 @@ mod com;
 mod config;
 mod db;
 
+use std::io;
 use std::net::TcpListener;
-
-use clap::Parser;
-use shared::{AckType, ClientMsg, MsgFromHost, MsgToHost, ServerMsg};
-use tracing::{error, info};
 
 use crate::com::{IncomingTcp, Tcp};
 use crate::config::Config;
-use crate::db::DB;
+use crate::db::{DB, DropFlag};
+use clap::Parser;
+use eyre::WrapErr;
+use shared::{AckType, ClientMsg, MsgFromHost, MsgToHost, ServerMsg};
+use tracing::{error, info};
 
 #[derive(Parser, Clone)]
 #[command(version, about, long_about=None)]
 struct Cli {
-    #[arg(long, value_name = "URL", help = "URL to talk the enclave")]
+    #[arg(short, long, value_name = "URL", help = "URL to talk the enclave")]
     enclave: Option<String>,
     #[arg(
         short,
         long,
-        value_name = "PORT",
+        value_name = "Port",
         help = "Port on which to list for client requests"
     )]
     listen: Option<String>,
     #[arg(
         long,
-        value_name = "MILLISECONDS",
+        value_name = "Millisecond",
         help = "How long to wait on client responses before timing out"
     )]
     listen_timeout: Option<u64>,
     #[arg(long, value_name = "URL", help = "URL of a masp indexer.")]
     indexer_url: Option<String>,
+    #[arg(
+        long,
+        value_name = "Size",
+        help = "Maximum number of entries in the fetching write-ahead log before flushing to disk."
+    )]
+    max_wal_size: Option<usize>,
 }
 
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> eyre::Result<()> {
     init_logging();
     let cli = Cli::parse();
     let config = Config::load_or_init(cli);
-    let db = DB::new().unwrap();
+
+    // open the DB and spawn the fetch job in the background
+    let mut db = DB::new()?;
+    let interrupt_flag = DropFlag::default();
+    db.start_updates(
+        config.db.indexer_url,
+        config.db.max_wal_size,
+        interrupt_flag.clone(),
+    )?;
 
     info!("Kassandra service started.");
-    let mut enclave_connection = Tcp::new(&config.enclave_url)?;
+    let mut enclave_connection =
+        Tcp::new(&config.enclave_url).wrap_err("Could not establish connection to the enclave")?;
     info!("Connected to enclave");
-    let listener = TcpListener::bind(&config.listen_url)?;
-    for stream in listener.incoming().flatten() {
-        info!("Received connection...");
-        let incoming = IncomingTcp::new(stream, config.listen_timeout);
-        if let Err(e) = handle_connection(incoming, &mut enclave_connection).await {
-            error!("Error handling client request: {e}");
-        }
-    }
 
-    Ok(())
+    let listener = TcpListener::bind(&config.listen_url)
+        .wrap_err("Could not bind to port to listen for incoming connections")?;
+    listener.set_nonblocking(true).unwrap();
+
+    loop {
+        match listener.accept() {
+            Ok((stream, _)) => {
+                info!("Received connection...");
+                let incoming = IncomingTcp::new(stream, config.listen_timeout);
+                if let Err(e) = handle_connection(incoming, &mut enclave_connection).await {
+                    error!("Error handling client request: {e}");
+                }
+            }
+            Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
+                if interrupt_flag.dropped() {
+                    db.close();
+                    return Ok(());
+                }
+            }
+            Err(e) => {
+                error!("Encountered unexpected error while listening for new connections: {e}");
+            }
+        }
+        std::hint::spin_loop();
+    }
 }
 
 /// Handle a client request and issue a response.
-async fn handle_connection(
-    mut client_conn: IncomingTcp,
-    enclave_conn: &mut Tcp,
-) -> std::io::Result<()> {
+async fn handle_connection(mut client_conn: IncomingTcp, enclave_conn: &mut Tcp) -> io::Result<()> {
     let req = match client_conn.timed_read().await {
         Some(Ok(req)) => req,
         Some(Err(e)) => {
