@@ -61,7 +61,6 @@ impl ReadWriteByte for Tcp {
     }
 }
 
-#[derive(Clone)]
 pub(crate) struct IncomingTcp {
     raw: shared::tcp::Tcp,
     timeout: Duration,
@@ -90,12 +89,14 @@ impl IncomingTcp {
     /// Try to read from a connection to a client. Times out if message is not
     /// received within time.
     pub async fn timed_read(&mut self) -> Option<Result<ClientMsg, MsgError>> {
-        let mut conn = self.clone();
-        let read = tokio::spawn(async move { conn.read() });
-        tokio::select! {
-            _ = tokio::time::sleep(self.timeout) => None,
-            val = read => Some(val.ok()).flatten()
-        }
+        tokio_scoped::scope(|scope| {
+            scope.block_on( async {
+                tokio::select! {
+                    _ = tokio::time::sleep(self.timeout) => None,
+                    val = async { self.read() } => Some(val),
+                }
+            })
+        })
     }
 }
 

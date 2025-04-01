@@ -7,6 +7,7 @@ use borsh::BorshDeserialize;
 use futures::task::AtomicWaker;
 use namada::borsh::BorshSerialize;
 use namada::chain::BlockHeight;
+use tokio::sync::Mutex;
 
 pub struct TaskError<C> {
     pub error: eyre::Error,
@@ -47,6 +48,10 @@ impl AsyncCounter {
                 count: AtomicUsize::new(0),
             }),
         }
+    }
+
+    pub fn count(&self) -> usize {
+        self.inner.value()
     }
 }
 
@@ -96,7 +101,6 @@ impl AtomicFlag {
 
 #[derive(Clone, Default)]
 pub struct PanicFlag {
-    #[cfg(not(target_family = "wasm"))]
     inner: AtomicFlag,
 }
 
@@ -115,22 +119,30 @@ impl Drop for PanicFlag {
     }
 }
 
-#[derive(Clone, Default)]
-pub struct DropFlag {
-    #[cfg(not(target_family = "wasm"))]
-    inner: AtomicFlag,
+#[derive(Clone)]
+pub struct InterruptFlag {
+    send: Arc<tokio::sync::watch::Sender<bool>>,
+    recv: Arc<Mutex<tokio::sync::watch::Receiver<bool>>>,
 }
 
-impl DropFlag {
-    #[inline(always)]
-    pub fn dropped(&self) -> bool {
-        self.inner.get()
+impl InterruptFlag {
+    pub fn new() -> Self {
+        let (send, recv) = tokio::sync::watch::channel(false);
+        Self {
+            send: Arc::new(send),
+            recv: Arc::new(Mutex::new(recv))
+        }
+    }
+
+    pub async fn dropped(&mut self) -> bool {
+        _ =  self.recv.lock().await.changed().await;
+        true
     }
 }
 
-impl Drop for DropFlag {
+impl Drop for InterruptFlag {
     fn drop(&mut self) {
-        self.inner.set();
+        _ = self.send.send(true);
     }
 }
 

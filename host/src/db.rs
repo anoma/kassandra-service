@@ -5,7 +5,7 @@ mod utils;
 
 use eyre::WrapErr;
 use rusqlite::Connection;
-pub use utils::DropFlag;
+pub use utils::InterruptFlag;
 
 use crate::config::kassandra_dir;
 use crate::db::fetch::Fetcher;
@@ -20,7 +20,7 @@ pub struct DB {
     /// Connection to the DB holding the index sets for registered keys
     fmd: Connection,
     /// A handle to the job updating the MASP DB
-    updating: Option<std::thread::JoinHandle<Result<(), eyre::Error>>>,
+    updating: Option<tokio::task::JoinHandle<Result<(), eyre::Error>>>,
 }
 
 impl DB {
@@ -74,14 +74,13 @@ impl DB {
         &mut self,
         url: reqwest::Url,
         max_wal_size: usize,
-        interrupt: DropFlag,
+        interrupt: InterruptFlag,
     ) -> eyre::Result<()> {
         let masp_db_path = kassandra_dir().join(MASP_DB_PATH);
         let conn = Connection::open(masp_db_path).wrap_err("Failed to creat MASP DB table")?;
         let mut fetcher = Fetcher::new(url, conn, max_wal_size)?;
-        let handle = std::thread::spawn(|| {
-            let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async move { fetcher.run().await })?;
+        let handle = tokio::task::spawn(async move {
+            fetcher.run().await?;
             drop(interrupt);
             Ok(())
         });
@@ -89,14 +88,14 @@ impl DB {
         Ok(())
     }
 
-    pub fn close(mut self) {
+    pub async fn close(mut self) {
         tracing::info!(
             "Closing the DB and stopping the update job. Please be patient, this can take some time..."
         );
         _ = self.masp.close();
         _ = self.fmd.close();
         if let Some(update) = self.updating.take() {
-            _ = update.join().unwrap();
+            _ = update.await;
         }
     }
 }

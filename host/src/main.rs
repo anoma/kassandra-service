@@ -3,15 +3,17 @@ mod config;
 mod db;
 
 use std::io;
-use std::net::TcpListener;
 
-use crate::com::{IncomingTcp, Tcp};
-use crate::config::Config;
-use crate::db::{DB, DropFlag};
 use clap::Parser;
 use eyre::WrapErr;
 use shared::{AckType, ClientMsg, MsgFromHost, MsgToHost, ServerMsg};
+use tokio::net::TcpListener;
+use tokio::select;
 use tracing::{error, info};
+
+use crate::com::{IncomingTcp, Tcp};
+use crate::config::Config;
+use crate::db::{DB, InterruptFlag};
 
 #[derive(Parser, Clone)]
 #[command(version, about, long_about=None)]
@@ -49,7 +51,7 @@ async fn main() -> eyre::Result<()> {
 
     // open the DB and spawn the fetch job in the background
     let mut db = DB::new()?;
-    let interrupt_flag = DropFlag::default();
+    let mut interrupt_flag = InterruptFlag::new();
     db.start_updates(
         config.db.indexer_url,
         config.db.max_wal_size,
@@ -60,31 +62,32 @@ async fn main() -> eyre::Result<()> {
     let mut enclave_connection =
         Tcp::new(&config.enclave_url).wrap_err("Could not establish connection to the enclave")?;
     info!("Connected to enclave");
-
     let listener = TcpListener::bind(&config.listen_url)
+        .await
         .wrap_err("Could not bind to port to listen for incoming connections")?;
-    listener.set_nonblocking(true).unwrap();
+
 
     loop {
-        match listener.accept() {
-            Ok((stream, _)) => {
-                info!("Received connection...");
-                let incoming = IncomingTcp::new(stream, config.listen_timeout);
-                if let Err(e) = handle_connection(incoming, &mut enclave_connection).await {
-                    error!("Error handling client request: {e}");
+        select! {
+            incoming = listener.accept() => {
+                match incoming {
+                    Ok((stream, _)) => {
+                        info!("Received connection...");
+                        let incoming = IncomingTcp::new(stream.into_std().unwrap(), config.listen_timeout);
+                        if let Err(e) = handle_connection(incoming, &mut enclave_connection).await {
+                            error!("Error handling client request: {e}");
+                        }
+                    }
+                    Err(e) => {
+                        error!("Encountered unexpected error while listening for new connections: {e}");
+                    }
                 }
             }
-            Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
-                if interrupt_flag.dropped() {
-                    db.close();
-                    return Ok(());
-                }
-            }
-            Err(e) => {
-                error!("Encountered unexpected error while listening for new connections: {e}");
+            _ = interrupt_flag.dropped() => {
+                db.close().await;
+                return Ok(());
             }
         }
-        std::hint::spin_loop();
     }
 }
 

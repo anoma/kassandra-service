@@ -49,7 +49,7 @@ where
             Ok(msg) => match msg {
                 MsgFromHost::RegisterKey { nonce, pk } => {
                     if let Some(key) =
-                        ratls::register_key(ctx.clone(), x25519_dalek::PublicKey::from(pk.0), nonce)
+                        ratls::register_key(&mut ctx, x25519_dalek::PublicKey::from(pk.0), nonce)
                     {
                         registered_keys.push(key);
                     }

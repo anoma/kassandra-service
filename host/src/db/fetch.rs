@@ -145,7 +145,7 @@ impl Fetcher {
 
         Ok(Self {
             fetched: fetched_ranges,
-            indexer: IndexerMaspClient::new(indexer_client, url, true, 50),
+            indexer: IndexerMaspClient::new(indexer_client, url, true, 1),
             conn: DbConn {
                 conn,
                 wal: Default::default(),
@@ -179,6 +179,7 @@ impl Fetcher {
     /// Fetch all masp txs up to the tip of the chain
     async fn sync(&mut self) -> Result<ControlFlow<()>, eyre::Error> {
         let Ok(Some(latest_height)) = self.indexer.last_block_height().await else {
+            tracing::error!("Could not fetch latest block from MASP Indexer, check to provided URL.");
             return Err(eyre::eyre!(
                 "Could not fetch latest block from MASP Indexer."
             ));
@@ -188,10 +189,15 @@ impl Fetcher {
             self.fetched.first(),
             latest_height
         );
-        for from in (self.fetched.first().0..=latest_height.0).step_by(BATCH_SIZE) {
+        for from in (self.fetched.first().0..=30).step_by(BATCH_SIZE) {
             let to = (from + BATCH_SIZE as u64 - 1).min(latest_height.0);
             for [from, to] in self.fetched.blocks_left_to_fetch(from, to) {
-                self.spawn_fetch_txs(from, to)
+                if self.tasks.active_tasks.count() <= 1 {
+                    tracing::info!("Spawning some shit");
+                    self.spawn_fetch_txs(from, to)
+                } else {
+                    break;
+                }
             }
         }
         while let Some(fetched) = self
@@ -250,10 +256,15 @@ impl Fetcher {
                     Pin::new(&mut Box::pin({
                         let client = client.clone();
                         async move {
-                            client
+                            let ret = client
                                 .fetch_shielded_transfers(from, to)
-                                .await
-                                .wrap_err("Failed to fetch shielded transfers")
+                                .await;
+
+                            if let Err(e) = &ret {
+                                tracing::error!("Fetching encountered error {e}");
+                            }
+                            let ret = ret.wrap_err("Failed to fetch shielded transfers");
+                            ret
                                 .map_err(|error| TaskError {
                                     error,
                                     context: [from, to],

@@ -13,11 +13,12 @@ flume.workspace = true
 futures = "0.3.31"
 namada = {package = "namada_sdk", path = "../../namada/crates/sdk" }
 rayon = "1.10.0"
-reqwest.workspace = true
+reqwest = { workspace = true }
 rusqlite = { version = "0.34.0", features = ["bundled"] }
 serde_cbor = { workspace = true, features = ["std"] }
 shared = { path = "../shared", features = ["std"] }
 tokio = { version = "1.44.1", features = ["full"] }
+tokio-scoped = "0.2.0"
 toml.workspace = true
 tracing.workspace = true
 tracing-log.workspace = true
