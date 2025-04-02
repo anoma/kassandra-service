@@ -851,8 +851,8 @@ name = "client"
 version = "0.0.1"
 dependencies = [
  "clap",
- "fuzzy-message-detection",
  "hex",
+ "polyfuzzy",
  "rand_core",
  "serde_cbor",
  "serde_json",
@@ -2059,7 +2059,7 @@ dependencies = [
 name = "fmd-enclave-service"
 version = "0.0.1"
 dependencies = [
- "fuzzy-message-detection",
+ "polyfuzzy",
  "shared",
  "x25519-dalek",
 ]
@@ -2273,17 +2273,6 @@ dependencies = [
  "pin-project-lite",
  "pin-utils",
  "slab",
-]
-
-[[package]]
-name = "fuzzy-message-detection"
-version = "0.1.0"
-dependencies = [
- "curve25519-dalek",
- "rand_core",
- "serde",
- "sha2 0.10.8",
- "subtle",
 ]
 
 [[package]]
@@ -5357,6 +5346,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "polyfuzzy"
+version = "0.1.0"
+source = "git+https://github.com/anoma/shielded-state-sync#f0c4dc06219db3192f74a8f67b64f29e01410bb1"
+dependencies = [
+ "curve25519-dalek",
+ "rand_core",
+ "serde",
+ "sha2 0.10.8",
+ "subtle",
+]
+
+[[package]]
 name = "portable-atomic"
 version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6397,8 +6398,8 @@ version = "0.0.1"
 dependencies = [
  "chacha20poly1305",
  "cobs 0.3.0",
- "fuzzy-message-detection",
  "hex",
+ "polyfuzzy",
  "rand_core",
  "serde",
  "serde_cbor",
