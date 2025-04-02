@@ -80,9 +80,10 @@ impl DB {
         let conn = Connection::open(masp_db_path).wrap_err("Failed to creat MASP DB table")?;
         let mut fetcher = Fetcher::new(url, conn, max_wal_size)?;
         let handle = tokio::task::spawn(async move {
-            fetcher.run().await?;
+            let ret = fetcher.run().await;
+            fetcher.save();
             drop(interrupt);
-            Ok(())
+            ret
         });
         self.updating = Some(handle);
         Ok(())

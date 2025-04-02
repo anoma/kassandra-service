@@ -2,19 +2,18 @@ use std::ops::ControlFlow;
 use std::time::Duration;
 
 use borsh::BorshDeserialize;
-use eyre::{Context, eyre};
+use eyre::Context;
 use futures::future::{Either, select};
 use namada::borsh::BorshSerializeExt;
 use namada::chain::BlockHeight;
 use namada::control_flow::{ShutdownSignal, ShutdownSignalChan, install_shutdown_signal};
-use namada::hints;
 use namada::masp::IndexerMaspClient;
 use namada::masp::utils::{IndexedNoteData, IndexedNoteEntry, MaspClient};
 use rusqlite::Connection;
 use tokio::task::JoinHandle;
 
 use crate::config::kassandra_dir;
-use crate::db::utils::{AsyncCounter, AtomicFlag, FetchedRanges, PanicFlag, TaskError};
+use crate::db::utils::{AsyncCounter, AtomicFlag, FetchedRanges, TaskError};
 
 const BATCH_SIZE: usize = 30;
 const DEFAULT_BUF_SIZE: usize = 32;
@@ -30,8 +29,6 @@ struct Tasks {
     message_sender: flume::Sender<Fetched>,
     /// A thread-safe counter of the number of tasks running
     active_tasks: AsyncCounter,
-    /// A thread-safe flag indicating a panic happened in a task
-    panic_flag: PanicFlag,
 }
 
 impl Tasks {
@@ -58,11 +55,10 @@ impl Tasks {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum FetcherState {
     Normal,
     Interrupted,
-    Errored(eyre::Error),
 }
 
 /// A buffered DB connection
@@ -81,7 +77,10 @@ impl DbConn {
         if self.wal.len() >= self.max_wal_size {
             tracing::info!("WAL limit reached, flushing to DB");
             let wal = std::mem::take(&mut self.wal);
-            let mut stmt = self.conn.prepare("INSERT INTO Txs (?1, ?2, ?3)").unwrap();
+            let mut stmt = self
+                .conn
+                .prepare("INSERT INTO Txs (idx, data, flag) VALUES (?1, ?2, ?3)")
+                .unwrap();
             for (idx, tx) in wal {
                 // TODO: Add fmd flag
                 stmt.execute([idx.serialize_to_vec(), tx.serialize_to_vec(), vec![]])
@@ -94,7 +93,10 @@ impl DbConn {
 impl Drop for DbConn {
     fn drop(&mut self) {
         let wal = std::mem::take(&mut self.wal);
-        let Ok(mut stmt) = self.conn.prepare("INSERT INTO Txs (?1, ?2, ?3)") else {
+        let Ok(mut stmt) = self
+            .conn
+            .prepare("INSERT INTO Txs (idx, data, flag) VALUES (?1, ?2, ?3)")
+        else {
             return;
         };
         for (idx, tx) in wal {
@@ -145,7 +147,7 @@ impl Fetcher {
 
         Ok(Self {
             fetched: fetched_ranges,
-            indexer: IndexerMaspClient::new(indexer_client, url, true, 10),
+            indexer: IndexerMaspClient::new(indexer_client, url, true, 100),
             conn: DbConn {
                 conn,
                 wal: Default::default(),
@@ -155,7 +157,6 @@ impl Fetcher {
                 message_receiver,
                 message_sender,
                 active_tasks: AsyncCounter::new(),
-                panic_flag: PanicFlag::default(),
             },
             interrupt_flag: Default::default(),
             state: FetcherState::Normal,
@@ -170,9 +171,16 @@ impl Fetcher {
         // keep trying to sync to the tip of the chain
         loop {
             self.check_exit_conditions();
-            if let ControlFlow::Break(_) = self.sync().await? {
+            if self.state == FetcherState::Interrupted {
                 return Ok(());
             }
+            match self.sync().await? {
+                ControlFlow::Break(_) => return Ok(()),
+                ControlFlow::Continue(_) => {
+                    tokio::time::sleep(Duration::from_secs(10)).await;
+                }
+            }
+            core::hint::spin_loop();
         }
     }
 
@@ -186,28 +194,31 @@ impl Fetcher {
                 "Could not fetch latest block from MASP Indexer."
             ));
         };
+        let synced_to = self.fetched.first();
+        if synced_to > latest_height {
+            tracing::info!("Synced.");
+            return Ok(ControlFlow::Continue(()));
+        }
+
         tracing::info!(
             "Fetching from block {}..={}",
             self.fetched.first(),
             latest_height
         );
+
         let mut handles = vec![];
         for from in (self.fetched.first().0..=latest_height.0).step_by(BATCH_SIZE) {
             let to = (from + BATCH_SIZE as u64 - 1).min(latest_height.0);
             for [from, to] in self.fetched.blocks_left_to_fetch(from, to) {
-                if self.tasks.active_tasks.count() <= 1 {
-                    tracing::info!("Spawning some shit");
-                    let handle = tokio::task::spawn(Fetcher::spawn_fetch_txs(
-                        self.indexer.clone(),
-                        self.tasks.clone(),
-                        self.interrupt_flag.clone(),
-                        from,
-                        to,
-                    ));
-                    handles.push(handle);
-                } else {
-                    break;
-                }
+                let handle = tokio::task::spawn(Fetcher::spawn_fetch_txs(
+                    self.indexer.clone(),
+                    self.tasks.clone(),
+                    self.shutdown_signal.clone(),
+                    self.interrupt_flag.clone(),
+                    from,
+                    to,
+                ));
+                handles.push(handle);
             }
         }
         while let Some(fetched) = self
@@ -220,23 +231,26 @@ impl Fetcher {
                 handles.push(handle);
             }
         }
-        //FIXME: improve
-        for handle in handles {
-            handle.await?;
-        }
+        self.check_exit_conditions();
+
         match std::mem::replace(&mut self.state, FetcherState::Normal) {
-            FetcherState::Errored(err) => Err(err),
             FetcherState::Interrupted => Ok(ControlFlow::Break(())),
-            FetcherState::Normal => Ok(ControlFlow::Continue(())),
+            FetcherState::Normal => {
+                //FIXME: improve
+                for handle in handles {
+                    if let Err(e) = handle.await {
+                        tracing::error!("Task panicked with {e}");
+                    }
+                }
+                Ok(ControlFlow::Continue(()))
+            }
         }
     }
 
     fn handle_fetched(&mut self, fetched: Fetched) -> Option<JoinHandle<()>> {
         match fetched {
             Ok((from, to, fetched)) => {
-                tracing::info!("Fetched blocks {from}..={to} ");
                 self.fetched.insert(from, to);
-                self.save();
                 self.conn.extend(fetched);
                 None
             }
@@ -245,13 +259,11 @@ impl Fetcher {
                 context: [from, to],
             }) => {
                 tracing::error!("Fetch task encountered error: {error}");
-                if !matches!(
-                    self.state,
-                    FetcherState::Errored(_) | FetcherState::Interrupted
-                ) {
+                if !matches!(self.state, FetcherState::Interrupted) {
                     Some(tokio::task::spawn(Fetcher::spawn_fetch_txs(
                         self.indexer.clone(),
                         self.tasks.clone(),
+                        self.shutdown_signal.clone(),
                         self.interrupt_flag.clone(),
                         from,
                         to,
@@ -267,53 +279,44 @@ impl Fetcher {
     async fn spawn_fetch_txs(
         client: IndexerMaspClient,
         tasks: Tasks,
-        interrupt: AtomicFlag,
+        mut shutdown: ShutdownSignalChan,
+        interrupt_flag: AtomicFlag,
         from: BlockHeight,
         to: BlockHeight,
     ) {
-        // FIXME: need this guard?
-        // let guard = (
-        //     self.tasks.active_tasks.clone(),
-        //     self.tasks.panic_flag.clone(),
-        // );
-        // let _guard = guard;
-        if !interrupt.get() {
+        let fetch = async {
             let ret = client.fetch_shielded_transfers(from, to).await;
-
             if let Err(e) = &ret {
                 tracing::error!("Fetching encountered error {e}");
             }
             let ret = ret.wrap_err("Failed to fetch shielded transfers");
-            let msg = ret
-                .map_err(|error| TaskError {
-                    error,
-                    context: [from, to],
-                })
-                .map(|fetched| (from, to, fetched));
-
-            tasks.message_sender.send_async(msg).await.unwrap()
+            ret.map_err(|error| TaskError {
+                error,
+                context: [from, to],
+            })
+            .map(|fetched| (from, to, fetched))
+        };
+        tokio::select! {
+            msg = fetch => {
+                tasks.message_sender.send_async(msg).await.unwrap();
+            }
+            _ = shutdown.wait_for_shutdown() => {
+                interrupt_flag.set();
+            }
         }
     }
 
     fn check_exit_conditions(&mut self) {
-        if hints::unlikely(self.tasks.panic_flag.panicked()) {
-            self.state = FetcherState::Errored(eyre!(
-                "A worker thread panicked during the shielded sync".to_string(),
-            ));
-        }
-        if matches!(
-            &self.state,
-            FetcherState::Interrupted | FetcherState::Errored(_)
-        ) {
+        if matches!(&self.state, FetcherState::Interrupted) {
             return;
         }
         if self.shutdown_signal.received() {
-            self.state = FetcherState::Interrupted;
             self.interrupt_flag.set();
+            self.state = FetcherState::Interrupted;
         }
     }
 
-    fn save(&self) {
+    pub(crate) fn save(&self) {
         let to_save = self.fetched.serialize_to_vec();
         std::fs::write(kassandra_dir().join(FETCHER_FILE), to_save).unwrap();
     }

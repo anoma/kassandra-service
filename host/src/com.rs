@@ -90,7 +90,7 @@ impl IncomingTcp {
     /// received within time.
     pub async fn timed_read(&mut self) -> Option<Result<ClientMsg, MsgError>> {
         tokio_scoped::scope(|scope| {
-            scope.block_on( async {
+            scope.block_on(async {
                 tokio::select! {
                     _ = tokio::time::sleep(self.timeout) => None,
                     val = async { self.read() } => Some(val),

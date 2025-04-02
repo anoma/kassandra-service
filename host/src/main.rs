@@ -66,7 +66,6 @@ async fn main() -> eyre::Result<()> {
         .await
         .wrap_err("Could not bind to port to listen for incoming connections")?;
 
-
     loop {
         select! {
             incoming = listener.accept() => {

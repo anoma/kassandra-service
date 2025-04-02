@@ -49,10 +49,6 @@ impl AsyncCounter {
             }),
         }
     }
-
-    pub fn count(&self) -> usize {
-        self.inner.value()
-    }
 }
 
 impl Clone for AsyncCounter {
@@ -99,26 +95,6 @@ impl AtomicFlag {
     }
 }
 
-#[derive(Clone, Default)]
-pub struct PanicFlag {
-    inner: AtomicFlag,
-}
-
-impl PanicFlag {
-    #[inline(always)]
-    pub fn panicked(&self) -> bool {
-        self.inner.get()
-    }
-}
-
-impl Drop for PanicFlag {
-    fn drop(&mut self) {
-        if std::thread::panicking() {
-            self.inner.set();
-        }
-    }
-}
-
 #[derive(Clone)]
 pub struct InterruptFlag {
     send: Arc<tokio::sync::watch::Sender<bool>>,
@@ -130,12 +106,12 @@ impl InterruptFlag {
         let (send, recv) = tokio::sync::watch::channel(false);
         Self {
             send: Arc::new(send),
-            recv: Arc::new(Mutex::new(recv))
+            recv: Arc::new(Mutex::new(recv)),
         }
     }
 
     pub async fn dropped(&mut self) -> bool {
-        _ =  self.recv.lock().await.changed().await;
+        _ = self.recv.lock().await.changed().await;
         true
     }
 }

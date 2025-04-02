@@ -11,7 +11,7 @@ eyre.workspace = true
 home.workspace = true
 flume.workspace = true
 futures = "0.3.31"
-namada = {package = "namada_sdk", path = "../../namada/crates/sdk" }
+namada = { package = "namada_sdk", git = "https://github.com/anoma/namada", rev =  "6a088b2e148fbb976d0727f17846c383dcad052c" }
 rayon = "1.10.0"
 reqwest = { workspace = true }
 rusqlite = { version = "0.34.0", features = ["bundled"] }
