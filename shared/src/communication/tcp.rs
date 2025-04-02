@@ -1,5 +1,6 @@
 //! Communication primitives for talking with hosts
 
+use std::io::ErrorKind;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::prelude::rust_2024::Vec;
@@ -15,15 +16,6 @@ const ENCLAVE_ADDRESS: &str = "0.0.0.0:12345";
 pub struct Tcp {
     pub raw: TcpStream,
     buffered: Vec<u8>,
-}
-
-impl Clone for Tcp {
-    fn clone(&self) -> Self {
-        Self {
-            raw: self.raw.try_clone().unwrap(),
-            buffered: self.buffered.clone(),
-        }
-    }
 }
 
 impl Tcp {
@@ -65,7 +57,11 @@ impl ReadWriteByte for Tcp {
         // block until data is read into
         // internal buffer
         while self.buffered.is_empty() {
-            self.buffered_read().unwrap();
+            match self.buffered_read() {
+                Err(err) if err.kind() == ErrorKind::WouldBlock => continue,
+                Ok(()) => {}
+                Err(e) => panic!("{e}"),
+            }
             core::hint::spin_loop();
         }
         self.buffered.remove(0)

@@ -5,7 +5,7 @@ version = "0.0.1"
 edition = "2024"
 
 [dependencies]
-fmd = {package = "fuzzy-message-detection", path = "../../shielded-state-sync/fuzzy-message-detection", features = ["serde"]}
+fmd.workspace = true
 shared = { path = "../shared" }
 x25519-dalek = "2.0.1"
 

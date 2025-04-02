@@ -24,7 +24,7 @@ use crate::Ctx;
 /// Upon success, the secure channel is used to send an FMD key to the enclave
 /// to be stored.
 pub(crate) fn register_key<RA, COM, RNG>(
-    mut ctx: Ctx<RA, COM, RNG>,
+    ctx: &mut Ctx<RA, COM, RNG>,
     pk: x25519_dalek::PublicKey,
     nonce: u64,
 ) -> Option<CompactSecretKey>

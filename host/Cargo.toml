@@ -5,16 +5,22 @@ version = "0.0.1"
 edition = "2024"
 
 [dependencies]
+borsh.workspace = true
 clap.workspace = true
+eyre.workspace = true
 home.workspace = true
-namada = {package = "namada_sdk", path = "../../namada/crates/sdk" }
-reqwest.workspace = true
+flume.workspace = true
+futures = "0.3.31"
+namada = { package = "namada_sdk", git = "https://github.com/anoma/namada", rev =  "6a088b2e148fbb976d0727f17846c383dcad052c" }
+rayon = "1.10.0"
+reqwest = { workspace = true }
 rusqlite = { version = "0.34.0", features = ["bundled"] }
 serde_cbor = { workspace = true, features = ["std"] }
 shared = { path = "../shared", features = ["std"] }
 tokio = { version = "1.44.1", features = ["full"] }
+tokio-scoped = "0.2.0"
 toml.workspace = true
 tracing.workspace = true
 tracing-log.workspace = true
-tracing-subscriber.workspace = true
-serde = { version = "1.0.218", features = ["derive"] }
+tracing-subscriber  = { workspace = true, features = ["env-filter"] }
+serde = { workspace = true, features = ["std"] }
