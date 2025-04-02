@@ -1,12 +1,13 @@
 //! Communication primitives for talking with hosts
 
-use crate::ReadWriteByte;
-use crate::tee::EnclaveComm;
 use std::io::ErrorKind;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::prelude::rust_2024::Vec;
 use std::{io, vec};
+
+use crate::ReadWriteByte;
+use crate::tee::EnclaveComm;
 
 const ENCLAVE_ADDRESS: &str = "0.0.0.0:12345";
 
