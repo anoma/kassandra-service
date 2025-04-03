@@ -4,6 +4,7 @@ use std::time::Duration;
 use borsh::BorshDeserialize;
 use eyre::Context;
 use futures::future::{Either, select};
+use futures::stream::{FuturesUnordered, StreamExt};
 use namada::borsh::BorshSerializeExt;
 use namada::chain::BlockHeight;
 use namada::control_flow::{ShutdownSignal, ShutdownSignalChan, install_shutdown_signal};
@@ -206,7 +207,7 @@ impl Fetcher {
             latest_height
         );
 
-        let mut handles = vec![];
+        let handles = FuturesUnordered::new();
         for from in (self.fetched.first().0..=latest_height.0).step_by(BATCH_SIZE) {
             let to = (from + BATCH_SIZE as u64 - 1).min(latest_height.0);
             for [from, to] in self.fetched.blocks_left_to_fetch(from, to) {
@@ -236,10 +237,9 @@ impl Fetcher {
         match std::mem::replace(&mut self.state, FetcherState::Normal) {
             FetcherState::Interrupted => Ok(ControlFlow::Break(())),
             FetcherState::Normal => {
-                //FIXME: improve
-                for handle in handles {
-                    if let Err(e) = handle.await {
-                        tracing::error!("Task panicked with {e}");
+                for result in <FuturesUnordered<_> as StreamExt>::collect::<Vec<_>>(handles).await {
+                    if let Err(e) = result {
+                        tracing::error!("Fetch task panicked with {e}");
                     }
                 }
                 Ok(ControlFlow::Continue(()))
