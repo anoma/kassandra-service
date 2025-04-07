@@ -12,6 +12,8 @@ mod tdx;
 #[cfg(feature = "transparent")]
 mod transparent;
 
+const GAMMA: usize = 12;
+
 #[derive(Parser)]
 #[command(version, about, long_about=None)]
 struct Cli {
@@ -68,13 +70,14 @@ fn get_host_uuid(url: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use crate::GAMMA;
     use fmd::FmdKeyGen;
     use fmd::fmd2_compact::MultiFmd2CompactScheme;
 
     #[test]
     fn generate_fmd_key() {
         let mut csprng = rand_core::OsRng;
-        let mut compact_multi_fmd2 = MultiFmd2CompactScheme::new(12, 1);
+        let mut compact_multi_fmd2 = MultiFmd2CompactScheme::new(GAMMA, 1);
         let (cmp_sk, cmp_pk) = compact_multi_fmd2.generate_keys(&mut csprng);
         panic!("Secret key: {cmp_sk}");
     }
