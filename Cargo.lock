@@ -850,6 +850,7 @@ checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 name = "client"
 version = "0.0.1"
 dependencies = [
+ "chacha20poly1305",
  "clap",
  "hex",
  "polyfuzzy",
@@ -5378,7 +5379,7 @@ dependencies = [
 [[package]]
 name = "polyfuzzy"
 version = "0.1.0"
-source = "git+https://github.com/anoma/shielded-state-sync#f0c4dc06219db3192f74a8f67b64f29e01410bb1"
+source = "git+https://github.com/anoma/shielded-state-sync?branch=bat%2Fget-cpk-from-csk#8d120f639c0f56f91921ad2b8334e6a4fd9d3d6f"
 dependencies = [
  "curve25519-dalek",
  "rand_core",

@@ -5,9 +5,10 @@
 //! Currently, the only direct communication between enclaves and
 //! clients is registering clients' FMD detection keys with the
 //! enclave.
-use fmd::fmd2_compact::CompactSecretKey;
+use fmd::KeyExpansion;
+use fmd::fmd2_compact::{CompactSecretKey, MultiFmd2CompactScheme};
 use rand_core::{OsRng, RngCore};
-use shared::ratls::Connection;
+use shared::ratls::{Connection, FmdKeyRegistration};
 use shared::tee::EnclaveClient;
 use shared::{AckType, ClientMsg, ServerMsg};
 
@@ -18,7 +19,13 @@ use crate::com::OutgoingTcp;
 ///
 /// The client also validates the Remote Attestation report
 /// provided by the enclave.
-pub(crate) fn register_fmd_key<C: EnclaveClient>(url: &str, fmd_key: CompactSecretKey) {
+pub(crate) fn register_fmd_key<C: EnclaveClient>(url: &str, csk_key: CompactSecretKey) {
+    // Get the fmd key and encryption key
+    let cpk_key = csk_key.public_key();
+    let scheme = MultiFmd2CompactScheme::new(12, 1);
+    let encryption_key = scheme.encryption_key::<chacha20poly1305::Key>(&csk_key);
+    let (fmd_key, _) = scheme.expand_keypair(&csk_key, &cpk_key);
+
     let mut rng = OsRng;
     let mut stream = OutgoingTcp::new(url);
     let conn = Connection::new(&mut rng);
@@ -62,8 +69,12 @@ pub(crate) fn register_fmd_key<C: EnclaveClient>(url: &str, fmd_key: CompactSecr
     };
 
     // encrypt the fmd key and send it to the enclave
+    let key_reg = FmdKeyRegistration {
+        fmd_key,
+        enc_key: encryption_key.into(),
+    };
     let cipher = conn
-        .encrypt_msg(&serde_cbor::to_vec(&fmd_key).unwrap(), &mut rng)
+        .encrypt_msg(&serde_cbor::to_vec(&key_reg).unwrap(), &mut rng)
         .unwrap();
     stream.write(ClientMsg::RATLSAck(AckType::Success(cipher)));
 
