@@ -6,12 +6,10 @@
 //! clients is registering clients' FMD detection keys with the
 //! enclave.
 
-use chacha20poly1305::Key;
-use curve25519_dalek::Scalar;
-use fmd::KeyExpansion;
 use fmd::fmd2_compact::{CompactSecretKey, MultiFmd2CompactScheme};
+use fmd::{KeyExpansion, MultiFmdScheme};
 use rand_core::{OsRng, RngCore};
-use shared::ratls::{Connection, FmdKeyRegistration};
+use shared::ratls::{Connection, EncKey, FmdKeyRegistration};
 use shared::tee::EnclaveClient;
 use shared::{AckType, ClientMsg, ServerMsg};
 
@@ -23,12 +21,22 @@ use crate::com::OutgoingTcp;
 ///
 /// The client also validates the Remote Attestation report
 /// provided by the enclave.
-pub(crate) fn register_fmd_key<C: EnclaveClient>(url: &str, csk_key: CompactSecretKey) {
+pub(crate) fn register_fmd_key<C: EnclaveClient>(
+    url: &str,
+    csk_key: CompactSecretKey,
+    encryption_key: EncKey,
+) {
     // Get the fmd key and encryption key
-    let cpk_key = csk_key.public_key();
-    let scheme = MultiFmd2CompactScheme::new(12, 1);
-    let encryption_key = encryption_key(&csk_key);
+    let cpk_key = csk_key.master_public_key();
+    let scheme = MultiFmd2CompactScheme::new(GAMMA, 1);
     let (fmd_key, _) = scheme.expand_keypair(&csk_key, &cpk_key);
+    // TODO: Support sending detection keys to multiple server instances
+    let detection_key = scheme
+        .multi_extract(&fmd_key, 1, 1, 1, 1)
+        .unwrap()
+        .into_iter()
+        .next()
+        .unwrap();
 
     let mut rng = OsRng;
     let mut stream = OutgoingTcp::new(url);
@@ -74,7 +82,7 @@ pub(crate) fn register_fmd_key<C: EnclaveClient>(url: &str, csk_key: CompactSecr
 
     // encrypt the fmd key and send it to the enclave
     let key_reg = FmdKeyRegistration {
-        fmd_key,
+        fmd_key: detection_key,
         enc_key: encryption_key.into(),
     };
     let cipher = conn
@@ -88,22 +96,6 @@ pub(crate) fn register_fmd_key<C: EnclaveClient>(url: &str, csk_key: CompactSecr
         Ok(ServerMsg::Error(msg)) => tracing::error!("Key registration failed: {msg}"),
         _ => tracing::error!("Received unexpected message from service"),
     }
-}
-
-fn encryption_key(csk_key: &CompactSecretKey) -> Key {
-    let mut point = Scalar::ONE;
-    // This is so stupid that this kind of multiplication
-    // is not implemented in the upstream library
-    for _ in 0..GAMMA {
-        point += Scalar::ONE;
-    }
-    csk_key
-        .evaluate(&[point])
-        .into_iter()
-        .next()
-        .unwrap()
-        .to_bytes()
-        .into()
 }
 
 fn abort_tls(mut stream: OutgoingTcp, msg: &str) -> ! {

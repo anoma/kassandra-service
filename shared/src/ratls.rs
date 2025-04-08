@@ -9,7 +9,7 @@ use core::fmt::Formatter;
 
 use chacha20poly1305::aead::Aead;
 use chacha20poly1305::{AeadCore, ChaCha20Poly1305, Key, KeyInit, Nonce};
-use fmd::FmdSecretKey;
+use fmd::DetectionKey;
 use rand_core::{CryptoRng, RngCore};
 use serde::de::{DeserializeOwned, Error, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -95,7 +95,7 @@ impl<'de> Deserialize<'de> for EncKey {
 #[derive(Deserialize, Serialize)]
 pub struct FmdKeyRegistration {
     /// The secret detection key for FMD
-    pub fmd_key: FmdSecretKey,
+    pub fmd_key: DetectionKey,
     /// A symmetric encryption key for storing encrypted results for users
     /// in a transparent database
     pub enc_key: EncKey,

@@ -1,6 +1,10 @@
 use crate::com::OutgoingTcp;
 use crate::ratls::register_fmd_key;
+use chacha20poly1305::Key;
 use clap::{Parser, Subcommand};
+use fmd::fmd2_compact::CompactSecretKey;
+use hkdf::Hkdf;
+use shared::ratls::EncKey;
 use shared::{ClientMsg, ServerMsg};
 use tracing_subscriber::fmt::SubscriberBuilder;
 
@@ -46,10 +50,11 @@ fn main() {
         Commands::RegisterKey { key } => {
             tracing::info!("Registering FMD key...");
             let csk_key = serde_json::from_str(key).unwrap();
+            let enc_key = encryption_key(&csk_key, &uuid);
             #[cfg(feature = "tdx")]
-            register_fmd_key::<tdx::TdxClient>(&cli.url, csk_key);
+            register_fmd_key::<tdx::TdxClient>(&cli.url, csk_key, enc_key);
             #[cfg(feature = "transparent")]
-            register_fmd_key::<transparent::TClient>(&cli.url, csk_key);
+            register_fmd_key::<transparent::TClient>(&cli.url, csk_key, enc_key);
         }
     }
 }
@@ -66,6 +71,18 @@ fn get_host_uuid(url: &str) -> String {
         Ok(ServerMsg::Error(err)) => panic!("{err}"),
         _ => panic!("Requesting UUID from host failed. Could not parse response."),
     }
+}
+
+fn encryption_key(csk_key: &CompactSecretKey, salt: &str) -> EncKey {
+    let hk = Hkdf::<sha2::Sha256>::new(
+        Some(salt.as_bytes()),
+        serde_json::to_string(csk_key).unwrap().as_bytes(),
+    );
+    let mut encryption_key = [0u8; 32];
+    hk.expand("Database encryption key".as_bytes(), &mut encryption_key)
+        .unwrap();
+    let enc_key: Key = encryption_key.into();
+    enc_key.into()
 }
 
 #[cfg(test)]
