@@ -5,11 +5,13 @@
 //! we do not need to maintain a list of active sessions or session ids.
 
 use alloc::vec::Vec;
+use core::fmt::Formatter;
 
 use chacha20poly1305::aead::Aead;
 use chacha20poly1305::{AeadCore, ChaCha20Poly1305, Key, KeyInit, Nonce};
+use fmd::DetectionKey;
 use rand_core::{CryptoRng, RngCore};
-use serde::de::DeserializeOwned;
+use serde::de::{DeserializeOwned, Error, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
 
@@ -34,6 +36,69 @@ pub enum RatlsError {
 pub struct TlsCiphertext {
     payload: Vec<u8>,
     nonce: Nonce,
+}
+
+/// A wrapper around a ChaCha key
+pub struct EncKey(Key);
+
+impl From<Key> for EncKey {
+    fn from(key: Key) -> Self {
+        Self(key)
+    }
+}
+
+impl From<EncKey> for Key {
+    fn from(key: EncKey) -> Self {
+        key.0
+    }
+}
+
+impl Serialize for EncKey {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_bytes(self.0.as_slice())
+    }
+}
+
+impl<'de> Deserialize<'de> for EncKey {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct EncKeyVisitor;
+        impl Visitor<'_> for EncKeyVisitor {
+            type Value = EncKey;
+
+            fn expecting(&self, formatter: &mut Formatter) -> core::fmt::Result {
+                formatter.write_str("32 bytes")
+            }
+
+            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                let bytes: [u8; 32] = v
+                    .try_into()
+                    .map_err(|_| Error::custom("Unexpected length of encryption key"))?;
+                Ok(EncKey(*Key::from_slice(&bytes)))
+            }
+        }
+
+        deserializer.deserialize_bytes(EncKeyVisitor)
+    }
+}
+
+/// The data needed to register a user's key with the
+/// Kassandra service.
+#[derive(Deserialize, Serialize)]
+pub struct FmdKeyRegistration {
+    /// The secret detection key for FMD
+    pub fmd_key: DetectionKey,
+    /// A symmetric encryption key for storing encrypted results for users
+    /// in a transparent database
+    pub enc_key: EncKey,
 }
 
 impl Serialize for TlsCiphertext {

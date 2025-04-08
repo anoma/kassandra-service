@@ -938,7 +938,7 @@ dependencies = [
 [[package]]
 name = "polyfuzzy"
 version = "0.1.0"
-source = "git+https://github.com/anoma/shielded-state-sync#f0c4dc06219db3192f74a8f67b64f29e01410bb1"
+source = "git+https://github.com/anoma/shielded-state-sync#37ad93f1ced5c7b1c68afa6310abf1f731fec4ce"
 dependencies = [
  "curve25519-dalek",
  "rand_core",

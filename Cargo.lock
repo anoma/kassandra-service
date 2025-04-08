@@ -850,12 +850,16 @@ checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 name = "client"
 version = "0.0.1"
 dependencies = [
+ "chacha20poly1305",
  "clap",
+ "curve25519-dalek",
  "hex",
+ "hkdf",
  "polyfuzzy",
  "rand_core",
  "serde_cbor",
  "serde_json",
+ "sha2 0.10.8",
  "shared",
  "tdx-quote",
  "thiserror 2.0.12",
@@ -2479,6 +2483,15 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "hkdf"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b5f8eb2ad728638ea2c7d47a21db23b7b58a72ed6a38256b8a1849f15fbbdf7"
+dependencies = [
+ "hmac",
+]
 
 [[package]]
 name = "hmac"
@@ -5378,7 +5391,7 @@ dependencies = [
 [[package]]
 name = "polyfuzzy"
 version = "0.1.0"
-source = "git+https://github.com/anoma/shielded-state-sync#f0c4dc06219db3192f74a8f67b64f29e01410bb1"
+source = "git+https://github.com/anoma/shielded-state-sync#37ad93f1ced5c7b1c68afa6310abf1f731fec4ce"
 dependencies = [
  "curve25519-dalek",
  "rand_core",

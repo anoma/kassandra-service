@@ -9,8 +9,7 @@
 
 use alloc::format;
 
-use fmd::fmd2_compact::CompactSecretKey;
-use shared::ratls::Connection;
+use shared::ratls::{Connection, FmdKeyRegistration};
 use shared::tee::{EnclaveComm, EnclaveRNG, RemoteAttestation};
 use shared::{AckType, MsgFromHost, MsgToHost};
 
@@ -27,7 +26,7 @@ pub(crate) fn register_key<RA, COM, RNG>(
     ctx: &mut Ctx<RA, COM, RNG>,
     pk: x25519_dalek::PublicKey,
     nonce: u64,
-) -> Option<CompactSecretKey>
+) -> Option<FmdKeyRegistration>
 where
     RA: RemoteAttestation,
     COM: EnclaveComm,

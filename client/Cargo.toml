@@ -12,12 +12,16 @@ mock = ["tdx", "tdx-quote/mock"]
 transparent = []
 
 [dependencies]
+chacha20poly1305.workspace = true
 clap.workspace = true
+curve25519-dalek.workspace = true
 fmd  = { workspace = true, features = ["serde"] }
 hex = "0.4.3"
+hkdf = "0.12.4"
 rand_core.workspace = true
 serde_cbor.workspace = true
 serde_json = { version = "1.0.140", default-features = false, features = ["alloc"] }
+sha2 = "0.10.8"
 shared = { path = "../shared", features = ["std"] }
 tdx-quote = { version = "0.0.3", default-features = false, optional = true }
 thiserror.workspace = true
