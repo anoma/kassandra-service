@@ -56,7 +56,7 @@ macro_rules! impl_serde {
 impl_serde!(32);
 impl_serde!(64);
 
-/// Messages to host environment
+/// Messages to host environment from the enclave
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MsgToHost {
     Basic(String),
@@ -67,7 +67,7 @@ pub enum MsgToHost {
     KeyRegSuccess,
 }
 
-/// Messages from host environment
+/// Messages from host environment to the enclave
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MsgFromHost {
     Basic(String),
@@ -76,6 +76,7 @@ pub enum MsgFromHost {
     RATLSAck(AckType),
 }
 
+/// Messages from clients to hosts
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClientMsg {
     /// Gives the clients public part of the shared key
@@ -88,6 +89,8 @@ pub enum ClientMsg {
         user_data: HexBytes<64>,
     },
     RATLSAck(AckType),
+    /// Request the host's UUID
+    RequestUUID,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -96,6 +99,7 @@ pub enum AckType {
     Fail,
 }
 
+/// Messages from hosts to clients
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMsg {
     /// The raw report bytes
@@ -104,6 +108,7 @@ pub enum ServerMsg {
     },
     Error(String),
     KeyRegSuccess,
+    UUID(String),
 }
 
 impl<'a> TryFrom<&'a ClientMsg> for MsgFromHost {
@@ -119,6 +124,7 @@ impl<'a> TryFrom<&'a ClientMsg> for MsgFromHost {
                 user_data: *user_data,
             }),
             ClientMsg::RATLSAck(v) => Ok(MsgFromHost::RATLSAck(v.clone())),
+            _ => Err("Message not intended for enclave"),
         }
     }
 }

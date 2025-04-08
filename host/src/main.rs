@@ -2,18 +2,21 @@ mod com;
 mod config;
 mod db;
 
-use std::io;
-
 use clap::Parser;
 use eyre::WrapErr;
-use shared::{AckType, ClientMsg, MsgFromHost, MsgToHost, ServerMsg};
+use once_cell::sync::OnceCell;
+use shared::{AckType, ClientMsg, MsgFromHost, ServerMsg};
 use tokio::net::TcpListener;
 use tokio::select;
 use tracing::{error, info};
+use uuid::Uuid;
 
 use crate::com::{IncomingTcp, Tcp};
 use crate::config::Config;
 use crate::db::{DB, InterruptFlag};
+
+/// The UUID for this host instances
+static HOST_UUID: OnceCell<Uuid> = OnceCell::new();
 
 #[derive(Parser, Clone)]
 #[command(version, about, long_about=None)]
@@ -50,7 +53,11 @@ async fn main() -> eyre::Result<()> {
     let config = Config::load_or_init(cli);
 
     // open the DB and spawn the fetch job in the background
-    let mut db = DB::new()?;
+    let (mut db, uuid) = DB::new()?;
+    info!("Loaded databases; this instance has a UUID of {uuid}");
+    HOST_UUID.set(uuid).unwrap();
+
+    // start the job of fetching MASP txs from an indexer
     let mut interrupt_flag = InterruptFlag::new();
     db.start_updates(
         config.db.indexer_url,
@@ -72,10 +79,11 @@ async fn main() -> eyre::Result<()> {
                 match incoming {
                     Ok((stream, _)) => {
                         info!("Received connection...");
-                        let incoming = IncomingTcp::new(stream.into_std().unwrap(), config.listen_timeout);
-                        if let Err(e) = handle_connection(incoming, &mut enclave_connection).await {
-                            error!("Error handling client request: {e}");
-                        }
+                        let incoming = IncomingTcp::new(
+                            stream.into_std().unwrap(),
+                            config.listen_timeout
+                        );
+                        handle_connection(incoming, &mut enclave_connection).await;
                     }
                     Err(e) => {
                         error!("Encountered unexpected error while listening for new connections: {e}");
@@ -91,37 +99,35 @@ async fn main() -> eyre::Result<()> {
 }
 
 /// Handle a client request and issue a response.
-async fn handle_connection(mut client_conn: IncomingTcp, enclave_conn: &mut Tcp) -> io::Result<()> {
+async fn handle_connection(mut client_conn: IncomingTcp, enclave_conn: &mut Tcp) {
     let req = match client_conn.timed_read().await {
         Some(Ok(req)) => req,
         Some(Err(e)) => {
             error!("Error receiving message from client: {e}");
-            return Ok(());
+            return;
         }
-        None => return Ok(()),
+        None => return,
     };
-    if let Ok(msg) = MsgFromHost::try_from(&req) {
-        if let MsgFromHost::RegisterKey { .. } = msg {
-            handle_key_registration(client_conn, enclave_conn, msg).await;
-        } else {
-            enclave_conn.write(msg);
-            match enclave_conn.read() {
-                Ok(msg) => {
-                    if let MsgToHost::Error(err) = &msg {
-                        error!("Received error from enclave: {err}");
-                    } else {
-                        info!("Received message: {:?}", msg);
-                        if let Ok(resp) = ServerMsg::try_from(msg) {
-                            client_conn.write(resp);
-                        }
-                    }
-                }
-                Err(e) => error!("Error receiving message from enclave: {e}"),
-            }
+
+    match &req {
+        msg @ ClientMsg::RegisterKey { .. } => {
+            handle_key_registration(
+                client_conn,
+                enclave_conn,
+                MsgFromHost::try_from(msg).unwrap(),
+            )
+            .await;
+        }
+        ClientMsg::RequestReport { .. } | ClientMsg::RATLSAck(_) => {
+            // These messages should have been preceded by a `RegisterKey`
+            // call and then these would be handled inside the
+            // `handle_key_registration` function.
+            error!("Unexpect message from client, ignoring...");
+        }
+        ClientMsg::RequestUUID => {
+            client_conn.write(ServerMsg::UUID(HOST_UUID.get().unwrap().to_string()));
         }
     }
-
-    Ok(())
 }
 
 /// A simplified TLS designed to send an encrypted secret FMD detection key from

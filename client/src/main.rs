@@ -1,7 +1,8 @@
-use clap::{Parser, Subcommand};
-use tracing_subscriber::fmt::SubscriberBuilder;
-
+use crate::com::OutgoingTcp;
 use crate::ratls::register_fmd_key;
+use clap::{Parser, Subcommand};
+use shared::{ClientMsg, ServerMsg};
+use tracing_subscriber::fmt::SubscriberBuilder;
 
 mod ratls;
 
@@ -37,7 +38,8 @@ enum Commands {
 fn main() {
     init_logging();
     let cli = Cli::parse();
-
+    let uuid = get_host_uuid(&cli.url);
+    tracing::info!("Connected to host with uuid: {uuid}");
     match &cli.command {
         Commands::RegisterKey { key } => {
             tracing::info!("Registering FMD key...");
@@ -52,6 +54,16 @@ fn main() {
 
 fn init_logging() {
     SubscriberBuilder::default().with_ansi(true).init();
+}
+
+fn get_host_uuid(url: &str) -> String {
+    let mut stream = OutgoingTcp::new(url);
+    stream.write(ClientMsg::RequestUUID);
+    match stream.read() {
+        Ok(ServerMsg::UUID(uuid)) => uuid,
+        Ok(ServerMsg::Error(err)) => panic!("{err}"),
+        _ => panic!("Requesting UUID from host failed. Could not parse response."),
+    }
 }
 
 #[cfg(test)]
