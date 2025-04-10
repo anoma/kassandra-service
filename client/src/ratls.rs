@@ -6,8 +6,6 @@
 //! clients is registering clients' FMD detection keys with the
 //! enclave.
 
-use crate::GAMMA;
-use crate::com::OutgoingTcp;
 use fmd::fmd2_compact::{CompactSecretKey, MultiFmd2CompactScheme};
 use fmd::{KeyExpansion, MultiFmdScheme};
 use rand_core::{OsRng, RngCore};
@@ -15,6 +13,9 @@ use shared::db::EncKey;
 use shared::ratls::{Connection, FmdKeyRegistration};
 use shared::tee::EnclaveClient;
 use shared::{AckType, ClientMsg, ServerMsg};
+
+use crate::GAMMA;
+use crate::com::OutgoingTcp;
 
 /// Initialize a new TLS connection with the enclave.
 /// The handshake phase establishes a shared key via DHKE.

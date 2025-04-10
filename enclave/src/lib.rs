@@ -3,6 +3,7 @@ extern crate alloc;
 
 use alloc::string::ToString;
 use alloc::vec::Vec;
+
 use shared::tee::{EnclaveComm, EnclaveRNG, RemoteAttestation};
 use shared::{MsgFromHost, MsgToHost};
 

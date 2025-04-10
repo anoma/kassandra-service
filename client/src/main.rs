@@ -1,5 +1,3 @@
-use crate::com::OutgoingTcp;
-use crate::ratls::register_fmd_key;
 use chacha20poly1305::Key;
 use clap::{Parser, Subcommand};
 use fmd::fmd2_compact::CompactSecretKey;
@@ -7,6 +5,9 @@ use hkdf::Hkdf;
 use shared::db::EncKey;
 use shared::{ClientMsg, ServerMsg};
 use tracing_subscriber::fmt::SubscriberBuilder;
+
+use crate::com::OutgoingTcp;
+use crate::ratls::register_fmd_key;
 
 mod ratls;
 

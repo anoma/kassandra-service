@@ -6,6 +6,7 @@ mod com;
 
 use alloc::string::ToString;
 use alloc::vec::Vec;
+
 use ostd::arch::x86::qemu::{exit_qemu, QemuExitCode};
 use ostd::prelude::*;
 use shared::{MsgFromHost, MsgToHost};

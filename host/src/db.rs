@@ -3,8 +3,6 @@
 mod fetch;
 mod utils;
 
-use crate::config::kassandra_dir;
-use crate::db::fetch::Fetcher;
 use borsh::BorshDeserialize;
 use eyre::WrapErr;
 use fmd::fmd2_compact::FlagCiphertexts;
@@ -14,6 +12,9 @@ use shared::db::{EncryptedResponse, Index};
 use std::str::FromStr;
 pub use utils::InterruptFlag;
 use uuid::Uuid;
+
+use crate::config::kassandra_dir;
+use crate::db::fetch::Fetcher;
 
 const MASP_DB_PATH: &str = "masp.db3";
 const FMD_DB_PATH: &str = "fmd.db3";
