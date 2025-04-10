@@ -3,8 +3,13 @@ extern crate alloc;
 
 use alloc::string::ToString;
 use alloc::vec::Vec;
+
 use shared::tee::{EnclaveComm, EnclaveRNG, RemoteAttestation};
 use shared::{MsgFromHost, MsgToHost};
+
+use crate::fmd::{IndexSet, check_flags};
+
+const GAMMA: usize = 12;
 
 #[derive(Clone)]
 struct Ctx<RA, COM, RNG>
@@ -33,6 +38,7 @@ where
     }
 }
 
+mod fmd;
 pub mod ratls;
 
 pub fn main<RA, COM, RNG>()
@@ -51,12 +57,21 @@ where
                     if let Some(key) =
                         ratls::register_key(&mut ctx, x25519_dalek::PublicKey::from(pk.0), nonce)
                     {
-                        registered_keys.push(key);
+                        let synced_height = key.birthday.unwrap_or(1);
+                        registered_keys.push((key, IndexSet::from(synced_height)));
                     }
                 }
                 MsgFromHost::RequestReport { user_data } => {
                     let quote = ctx.ra.get_quote(user_data.0);
                     ctx.com.write(&MsgToHost::Report(quote));
+                }
+                MsgFromHost::RequiredBlocks => {
+                    let heights = registered_keys.iter().map(|(_, ixs)| ixs.next()).collect();
+                    ctx.com.write(&MsgToHost::BlockRequests(heights));
+                }
+                MsgFromHost::RequestedFlags(flags) => {
+                    let response = check_flags(&mut ctx, &mut registered_keys, flags);
+                    ctx.com.write(&response);
                 }
                 _ => {}
             },

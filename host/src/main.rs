@@ -1,22 +1,27 @@
+#![feature(format_args_nl)]
 mod com;
 mod config;
 mod db;
+mod scheduler;
 
 use clap::Parser;
 use eyre::WrapErr;
 use once_cell::sync::OnceCell;
-use shared::{AckType, ClientMsg, MsgFromHost, ServerMsg};
+use shared::{AckType, ClientMsg, MsgFromHost, MsgToHost, ServerMsg};
 use tokio::net::TcpListener;
-use tokio::select;
 use tracing::{error, info};
 use uuid::Uuid;
 
 use crate::com::{IncomingTcp, Tcp};
 use crate::config::Config;
 use crate::db::{DB, InterruptFlag};
+use crate::scheduler::{EventScheduler, NextEvent};
 
 /// The UUID for this host instances
 static HOST_UUID: OnceCell<Uuid> = OnceCell::new();
+/// Optionally log errors for the fetch job
+static LOG_FETCH_ERRORS: OnceCell<bool> = OnceCell::new();
+const FETCH_ERRORS_ENV: &str = "LOG_FETCH_ERRORS";
 
 #[derive(Parser, Clone)]
 #[command(version, about, long_about=None)]
@@ -58,7 +63,7 @@ async fn main() -> eyre::Result<()> {
     HOST_UUID.set(uuid).unwrap();
 
     // start the job of fetching MASP txs from an indexer
-    let mut interrupt_flag = InterruptFlag::new();
+    let interrupt_flag = InterruptFlag::new();
     db.start_updates(
         config.db.indexer_url,
         config.db.max_wal_size,
@@ -72,29 +77,21 @@ async fn main() -> eyre::Result<()> {
     let listener = TcpListener::bind(&config.listen_url)
         .await
         .wrap_err("Could not bind to port to listen for incoming connections")?;
-
+    let mut events = EventScheduler::new(listener, interrupt_flag);
     loop {
-        select! {
-            incoming = listener.accept() => {
-                match incoming {
-                    Ok((stream, _)) => {
-                        info!("Received connection...");
-                        let incoming = IncomingTcp::new(
-                            stream.into_std().unwrap(),
-                            config.listen_timeout
-                        );
-                        handle_connection(incoming, &mut enclave_connection).await;
-                    }
-                    Err(e) => {
-                        error!("Encountered unexpected error while listening for new connections: {e}");
-                    }
-                }
-            }
-            _ = interrupt_flag.dropped() => {
+        match events.next_query().await {
+            NextEvent::Interrupt => {
                 db.close().await;
                 return Ok(());
             }
+            NextEvent::Accept(stream) => {
+                info!("Received connection...");
+                let incoming = IncomingTcp::new(stream.into_std().unwrap(), config.listen_timeout);
+                handle_connection(incoming, &mut enclave_connection).await;
+            }
+            NextEvent::PerformFmd => handle_fmd(&mut enclave_connection, &mut db),
         }
+        core::hint::spin_loop()
     }
 }
 
@@ -207,8 +204,57 @@ async fn handle_key_registration(
     }
 }
 
+/// Perform the next batch of work for fuzzy-message detection.
+fn handle_fmd(enclave_conn: &mut Tcp, db: &mut DB) {
+    enclave_conn.write(MsgFromHost::RequiredBlocks);
+    // Ask enclave what block heights to pass in
+    let heights = match enclave_conn.read() {
+        Ok(MsgToHost::BlockRequests(mut ranges)) => {
+            ranges.sort();
+            ranges.dedup();
+            ranges
+        }
+        Ok(_) => {
+            error!("Received an unexpected message from enclave in response to `BlockRequests`");
+            return;
+        }
+        Err(e) => {
+            error!("Error receiving message from enclave: {e}");
+            return;
+        }
+    };
+    if heights.is_empty() {
+        return;
+    }
+
+    let flags = heights
+        .into_iter()
+        .flat_map(|h| db.get_height(h).unwrap())
+        .collect();
+
+    enclave_conn.write(MsgFromHost::RequestedFlags(flags));
+
+    let results = match enclave_conn.read() {
+        Ok(MsgToHost::FmdResults(ranges)) => ranges,
+        Ok(_) => {
+            error!("Received an unexpected message from enclave in response to `RequestedFlags`");
+            return;
+        }
+        Err(e) => {
+            error!("Error receiving message from enclave: {e}");
+            return;
+        }
+    };
+    db.update_indices(results).unwrap();
+}
+
 fn init_logging() {
     tracing_subscriber::fmt::SubscriberBuilder::default()
         .with_ansi(true)
         .init();
+    if std::env::var(FETCH_ERRORS_ENV).unwrap_or_default() != "" {
+        LOG_FETCH_ERRORS.set(true).unwrap();
+    } else {
+        LOG_FETCH_ERRORS.set(false).unwrap();
+    }
 }

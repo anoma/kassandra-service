@@ -3,8 +3,12 @@
 mod fetch;
 mod utils;
 
+use borsh::BorshDeserialize;
 use eyre::WrapErr;
+use fmd::fmd2_compact::FlagCiphertexts;
+use namada::tx::IndexedTx;
 use rusqlite::Connection;
+use shared::db::{EncryptedResponse, Index};
 use std::str::FromStr;
 pub use utils::InterruptFlag;
 use uuid::Uuid;
@@ -37,8 +41,9 @@ impl DB {
                 "CREATE TABLE Txs (
                 id INTEGER PRIMARY KEY,
                 idx BLOB NOT NULL,
+                height INTEGER NOT NULL,
                 data BLOB NOT NULL,
-                flag BLOB
+                flag TEXT
                 )",
                 (),
             )
@@ -53,8 +58,8 @@ impl DB {
             let fmd = Connection::open(fmd_db_path).wrap_err("Failed to open the FMD DB")?;
             fmd.execute(
                 "CREATE TABLE Indices (
-                id INTEGER PRIMARY KEY,
-                owner BLOB NOT NULL,
+                owner BLOB NOT NULL PRIMARY KEY,
+                nonce BLOB NOT NULL,
                 idx_set BLOB NOT NULL
             )",
                 (),
@@ -90,6 +95,62 @@ impl DB {
             },
             uuid,
         ))
+    }
+
+    /// Get all flags of MASP txs at the requested block height
+    pub fn get_height(
+        &mut self,
+        height: u64,
+    ) -> eyre::Result<Vec<(Index, Option<FlagCiphertexts>)>> {
+        let mut stmt = self
+            .masp
+            .prepare("SELECT idx, flag FROM Txs WHERE height=?1")
+            .unwrap();
+        let rows: Vec<Result<(Vec<u8>, String), _>> = stmt
+            .query_map([height], |row| Ok((row.get(0)?, row.get(1)?)))
+            .wrap_err("Database query failed")?
+            .collect();
+        Ok(rows
+            .into_iter()
+            .map(|res| match res {
+                Ok((idx, flag_str)) => {
+                    let Ok(idx) = <IndexedTx as BorshDeserialize>::try_from_slice(&idx)
+                        .map(|ix|  Index{ height: ix.block_height.0, tx: ix.block_index.0 })else {
+                        panic!("Could not deserialize `IndexedTx` of masp tx at height: {height}");
+                    };
+                    let flag = serde_json::from_str::<FlagCiphertexts>(&flag_str)
+                        .map(Some)
+                        .unwrap_or_else(|e| {
+                            tracing::error!(
+                                "Could not deserialize `FlagCiphertext` of a row at height {height}: {e}"
+                            );
+                            None
+                        });
+                    (idx, flag)
+                }
+                Err(err) => {
+                    panic!("Failed to read masp txs at height {height} from DB: {err}");
+                }
+            })
+            .collect())
+    }
+
+    /// Update the DB with the latest encrypted index set per user
+    pub fn update_indices(&mut self, new_indices: Vec<EncryptedResponse>) -> eyre::Result<()> {
+        let mut stmt = self
+            .fmd
+            .prepare("INSERT OR REPLACE INTO Indices(nonce, idx_set, owner) VALUES (?1, ?2, ?3)")
+            .unwrap();
+        for EncryptedResponse {
+            owner,
+            nonce,
+            indices,
+        } in new_indices
+        {
+            stmt.execute((nonce, indices, owner))
+                .wrap_err("Could not update FMD db")?;
+        }
+        Ok(())
     }
 
     /// Spawn the update job in the background and save a handle to it.

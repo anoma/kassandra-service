@@ -4,6 +4,7 @@ extern crate alloc;
 extern crate std;
 
 pub mod communication;
+pub mod db;
 pub mod ratls;
 pub mod tee;
 
