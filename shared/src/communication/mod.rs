@@ -6,15 +6,15 @@
 #[cfg(feature = "std")]
 pub mod tcp;
 
+use crate::db::{EncryptedResponse, Index};
+use crate::ratls::TlsCiphertext;
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
-
+use fmd::fmd2_compact::FlagCiphertexts;
 use serde::de::{DeserializeOwned, Error};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
-
-use crate::ratls::TlsCiphertext;
 
 #[derive(Debug, Copy, Clone)]
 pub struct HexBytes<const N: usize>(pub [u8; N]);
@@ -65,6 +65,8 @@ pub enum MsgToHost {
     RATLS { report: Vec<u8> },
     Report(Vec<u8>),
     KeyRegSuccess,
+    BlockRequests(Vec<u64>),
+    FmdResults(Vec<EncryptedResponse>),
 }
 
 /// Messages from host environment to the enclave
@@ -74,6 +76,8 @@ pub enum MsgFromHost {
     RegisterKey { nonce: u64, pk: HexBytes<32> },
     RequestReport { user_data: HexBytes<64> },
     RATLSAck(AckType),
+    RequiredBlocks,
+    RequestedFlags(Vec<(Index, Option<FlagCiphertexts>)>),
 }
 
 /// Messages from clients to hosts

@@ -4,7 +4,7 @@ use chacha20poly1305::Key;
 use clap::{Parser, Subcommand};
 use fmd::fmd2_compact::CompactSecretKey;
 use hkdf::Hkdf;
-use shared::ratls::EncKey;
+use shared::db::EncKey;
 use shared::{ClientMsg, ServerMsg};
 use tracing_subscriber::fmt::SubscriberBuilder;
 
@@ -38,6 +38,12 @@ enum Commands {
     RegisterKey {
         #[arg(short, long, help = "JSON encoded FMD secret key")]
         key: String,
+        #[arg(
+            long,
+            help = "A block height to start detecting after",
+            value_name = "Integer"
+        )]
+        birthday: Option<u64>,
     },
 }
 
@@ -47,14 +53,14 @@ fn main() {
     let uuid = get_host_uuid(&cli.url);
     tracing::info!("Connected to host with uuid: {uuid}");
     match &cli.command {
-        Commands::RegisterKey { key } => {
+        Commands::RegisterKey { key, birthday } => {
             tracing::info!("Registering FMD key...");
             let csk_key = serde_json::from_str(key).unwrap();
             let enc_key = encryption_key(&csk_key, &uuid);
             #[cfg(feature = "tdx")]
-            register_fmd_key::<tdx::TdxClient>(&cli.url, csk_key, enc_key);
+            register_fmd_key::<tdx::TdxClient>(&cli.url, csk_key, enc_key, *birthday);
             #[cfg(feature = "transparent")]
-            register_fmd_key::<transparent::TClient>(&cli.url, csk_key, enc_key);
+            register_fmd_key::<transparent::TClient>(&cli.url, csk_key, enc_key, *birthday);
         }
     }
 }

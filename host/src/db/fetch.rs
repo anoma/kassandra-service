@@ -32,6 +32,14 @@ struct Tasks {
     active_tasks: AsyncCounter,
 }
 
+macro_rules! db_error {
+   ($($arg:tt)*) => {{
+       if *$crate::LOG_FETCH_ERRORS.get().unwrap() {
+            tracing::error!("{}", format_args_nl!($($arg)*));
+       }
+    }};
+}
+
 impl Tasks {
     async fn get_next_message(&mut self, interrupt: AtomicFlag) -> Option<Fetched> {
         if interrupt.get() {
@@ -80,12 +88,17 @@ impl DbConn {
             let wal = std::mem::take(&mut self.wal);
             let mut stmt = self
                 .conn
-                .prepare("INSERT INTO Txs (idx, data, flag) VALUES (?1, ?2, ?3)")
+                .prepare("INSERT INTO Txs (idx, height, data, flag) VALUES (?1, ?2, ?3, ?4)")
                 .unwrap();
             for (idx, tx) in wal {
                 // TODO: Add fmd flag
-                stmt.execute([idx.serialize_to_vec(), tx.serialize_to_vec(), vec![]])
-                    .unwrap();
+                stmt.execute((
+                    idx.serialize_to_vec(),
+                    idx.block_height.0,
+                    tx.serialize_to_vec(),
+                    "",
+                ))
+                .unwrap();
             }
         }
     }
@@ -96,14 +109,19 @@ impl Drop for DbConn {
         let wal = std::mem::take(&mut self.wal);
         let Ok(mut stmt) = self
             .conn
-            .prepare("INSERT INTO Txs (idx, data, flag) VALUES (?1, ?2, ?3)")
+            .prepare("INSERT INTO Txs (idx, height, data, flag) VALUES (?1, ?2, ?3, ?4)")
         else {
             return;
         };
         for (idx, tx) in wal {
             // TODO: Add fmd flag
             _ = stmt
-                .execute([idx.serialize_to_vec(), tx.serialize_to_vec(), vec![]])
+                .execute((
+                    idx.serialize_to_vec(),
+                    idx.block_height.0,
+                    tx.serialize_to_vec(),
+                    "",
+                ))
                 .unwrap();
         }
     }
@@ -264,7 +282,7 @@ impl Fetcher {
                 error,
                 context: [from, to],
             }) => {
-                tracing::error!("Fetch task encountered error: {error}");
+                db_error!("Fetch task encountered error: {error}");
                 if !matches!(self.state, FetcherState::Interrupted) {
                     Some(tokio::task::spawn(Fetcher::spawn_fetch_txs(
                         self.indexer.clone(),
@@ -293,7 +311,7 @@ impl Fetcher {
         let fetch = async {
             let ret = client.fetch_shielded_transfers(from, to).await;
             if let Err(e) = &ret {
-                tracing::error!("Fetching encountered error {e}");
+                db_error!("Fetching encountered error {e}");
             }
             let ret = ret.wrap_err("Failed to fetch shielded transfers");
             ret.map_err(|error| TaskError {

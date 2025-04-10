@@ -6,15 +6,15 @@
 //! clients is registering clients' FMD detection keys with the
 //! enclave.
 
+use crate::GAMMA;
+use crate::com::OutgoingTcp;
 use fmd::fmd2_compact::{CompactSecretKey, MultiFmd2CompactScheme};
 use fmd::{KeyExpansion, MultiFmdScheme};
 use rand_core::{OsRng, RngCore};
-use shared::ratls::{Connection, EncKey, FmdKeyRegistration};
+use shared::db::EncKey;
+use shared::ratls::{Connection, FmdKeyRegistration};
 use shared::tee::EnclaveClient;
 use shared::{AckType, ClientMsg, ServerMsg};
-
-use crate::GAMMA;
-use crate::com::OutgoingTcp;
 
 /// Initialize a new TLS connection with the enclave.
 /// The handshake phase establishes a shared key via DHKE.
@@ -25,6 +25,7 @@ pub(crate) fn register_fmd_key<C: EnclaveClient>(
     url: &str,
     csk_key: CompactSecretKey,
     encryption_key: EncKey,
+    birthday: Option<u64>,
 ) {
     // Get the fmd key and encryption key
     let cpk_key = csk_key.master_public_key();
@@ -83,7 +84,8 @@ pub(crate) fn register_fmd_key<C: EnclaveClient>(
     // encrypt the fmd key and send it to the enclave
     let key_reg = FmdKeyRegistration {
         fmd_key: detection_key,
-        enc_key: encryption_key.into(),
+        enc_key: encryption_key,
+        birthday,
     };
     let cipher = conn
         .encrypt_msg(&serde_cbor::to_vec(&key_reg).unwrap(), &mut rng)

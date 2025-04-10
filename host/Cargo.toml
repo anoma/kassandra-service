@@ -10,14 +10,16 @@ clap.workspace = true
 eyre.workspace = true
 home.workspace = true
 flume.workspace = true
+fmd.workspace = true
 futures = "0.3.31"
 namada = { package = "namada_sdk", git = "https://github.com/anoma/namada", rev =  "6a088b2e148fbb976d0727f17846c383dcad052c" }
 once_cell = "1.21.1"
 rayon = "1.10.0"
 reqwest = { workspace = true }
 rusqlite = { version = "0.34.0", features = ["bundled"] }
-serde_cbor = { workspace = true, features = ["std"] }
 serde = { workspace = true, features = ["std"] }
+serde_cbor = { workspace = true, features = ["std"] }
+serde_json.workspace = true
 shared = { path = "../shared", features = ["std"] }
 tokio = { version = "1.44.1", features = ["full"] }
 tokio-scoped = "0.2.0"

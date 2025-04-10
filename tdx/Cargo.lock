@@ -416,6 +416,7 @@ checksum = "b3ea1ec5f8307826a5b71094dd91fc04d4ae75d5709b20ad351c7fb4815c86ec"
 name = "fmd-enclave-service"
 version = "0.0.1"
 dependencies = [
+ "chacha20poly1305",
  "polyfuzzy",
  "shared",
  "x25519-dalek",
@@ -1196,6 +1197,7 @@ dependencies = [
  "rand_core",
  "serde",
  "serde_cbor",
+ "sha2",
  "tdx-quote",
  "thiserror",
  "x25519-dalek",
