@@ -242,7 +242,8 @@ fn handle_fmd(enclave_conn: &mut Tcp, db: &mut DB) {
         .flat_map(|h| db.get_height(h).unwrap())
         .collect();
 
-    enclave_conn.write(MsgFromHost::RequestedFlags(flags));
+    let synced_to = db.synced_to();
+    enclave_conn.write(MsgFromHost::RequestedFlags { synced_to, flags });
 
     let results = match enclave_conn.read() {
         Ok(MsgToHost::FmdResults(ranges)) => ranges,

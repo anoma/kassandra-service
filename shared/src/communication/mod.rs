@@ -75,11 +75,19 @@ pub enum MsgToHost {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MsgFromHost {
     Basic(String),
-    RegisterKey { nonce: u64, pk: HexBytes<32> },
-    RequestReport { user_data: HexBytes<64> },
+    RegisterKey {
+        nonce: u64,
+        pk: HexBytes<32>,
+    },
+    RequestReport {
+        user_data: HexBytes<64>,
+    },
     RATLSAck(AckType),
     RequiredBlocks,
-    RequestedFlags(Vec<(Index, Option<FlagCiphertexts>)>),
+    RequestedFlags {
+        synced_to: u64,
+        flags: Vec<(Index, Option<FlagCiphertexts>)>,
+    },
 }
 
 /// Messages from clients to hosts
