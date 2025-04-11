@@ -87,7 +87,7 @@ async fn main() -> eyre::Result<()> {
             NextEvent::Accept(stream) => {
                 info!("Received connection...");
                 let incoming = IncomingTcp::new(stream.into_std().unwrap(), config.listen_timeout);
-                handle_connection(incoming, &mut enclave_connection).await;
+                handle_connection(incoming, &mut enclave_connection, &db).await;
             }
             NextEvent::PerformFmd => handle_fmd(&mut enclave_connection, &mut db),
         }
@@ -96,7 +96,7 @@ async fn main() -> eyre::Result<()> {
 }
 
 /// Handle a client request and issue a response.
-async fn handle_connection(mut client_conn: IncomingTcp, enclave_conn: &mut Tcp) {
+async fn handle_connection(mut client_conn: IncomingTcp, enclave_conn: &mut Tcp, db: &DB) {
     let req = match client_conn.timed_read().await {
         Some(Ok(req)) => req,
         Some(Err(e)) => {
@@ -123,6 +123,16 @@ async fn handle_connection(mut client_conn: IncomingTcp, enclave_conn: &mut Tcp)
         }
         ClientMsg::RequestUUID => {
             client_conn.write(ServerMsg::UUID(HOST_UUID.get().unwrap().to_string()));
+        }
+        ClientMsg::RequestIndices { key_hash } => {
+            info!("Querying DB for key hash: {key_hash}");
+            match db.fetch_indices(key_hash) {
+                Ok(resp) => client_conn.write(ServerMsg::IndicesResponse(resp)),
+                Err(err) => {
+                    error!("{err}");
+                    client_conn.write(ServerMsg::Error(format!("Failed to get indices: {err}")));
+                }
+            }
         }
     }
 }

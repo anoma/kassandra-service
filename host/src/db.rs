@@ -3,13 +3,14 @@
 mod fetch;
 mod utils;
 
+use std::str::FromStr;
+
 use borsh::BorshDeserialize;
 use eyre::WrapErr;
 use fmd::fmd2_compact::FlagCiphertexts;
 use namada::tx::IndexedTx;
 use rusqlite::Connection;
 use shared::db::{EncryptedResponse, Index};
-use std::str::FromStr;
 pub use utils::InterruptFlag;
 use uuid::Uuid;
 
@@ -58,7 +59,7 @@ impl DB {
             let fmd = Connection::open(fmd_db_path).wrap_err("Failed to open the FMD DB")?;
             fmd.execute(
                 "CREATE TABLE Indices (
-                owner BLOB NOT NULL PRIMARY KEY,
+                owner TEXT NOT NULL PRIMARY KEY,
                 nonce BLOB NOT NULL,
                 idx_set BLOB NOT NULL
             )",
@@ -121,7 +122,7 @@ impl DB {
                     let flag = serde_json::from_str::<FlagCiphertexts>(&flag_str)
                         .map(Some)
                         .unwrap_or_else(|e| {
-                            tracing::error!(
+                            tracing::debug!(
                                 "Could not deserialize `FlagCiphertext` of a row at height {height}: {e}"
                             );
                             None
@@ -151,6 +152,23 @@ impl DB {
                 .wrap_err("Could not update FMD db")?;
         }
         Ok(())
+    }
+
+    /// Get the encrypted index set belonging to a registered key
+    pub fn fetch_indices(&self, user: &str) -> eyre::Result<EncryptedResponse> {
+        let (owner, n, indices) = self
+            .fmd
+            .query_row::<(String, Vec<u8>, Vec<u8>), _, _>(
+                "SELECT owner, nonce, idx_set FROM Indices WHERE owner=?1",
+                rusqlite::params![user],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .wrap_err("Could not find user's key hash in the DB")?;
+        Ok(EncryptedResponse {
+            owner,
+            nonce: n.try_into().unwrap(),
+            indices,
+        })
     }
 
     /// Spawn the update job in the background and save a handle to it.

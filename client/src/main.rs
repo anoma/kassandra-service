@@ -7,11 +7,13 @@ use shared::{ClientMsg, ServerMsg};
 use tracing_subscriber::fmt::SubscriberBuilder;
 
 use crate::com::OutgoingTcp;
+use crate::query::query_fmd_key;
 use crate::ratls::register_fmd_key;
 
 mod ratls;
 
 mod com;
+mod query;
 #[cfg(feature = "tdx")]
 mod tdx;
 #[cfg(feature = "transparent")]
@@ -46,6 +48,13 @@ enum Commands {
         )]
         birthday: Option<u64>,
     },
+    #[command(
+        about = "Request the indices of MASP transactions that should be trial-decrypted by the provided key"
+    )]
+    QueryIndices {
+        #[arg(short, long, help = "JSON encoded FMD secret key")]
+        key: String,
+    },
 }
 
 fn main() {
@@ -62,6 +71,15 @@ fn main() {
             register_fmd_key::<tdx::TdxClient>(&cli.url, csk_key, enc_key, *birthday);
             #[cfg(feature = "transparent")]
             register_fmd_key::<transparent::TClient>(&cli.url, csk_key, enc_key, *birthday);
+        }
+        Commands::QueryIndices { key } => {
+            let csk_key = serde_json::from_str(key).unwrap();
+            let enc_key = encryption_key(&csk_key, &uuid);
+            tracing::info!(
+                "Querying MASP indices for key hash {:?} ...",
+                enc_key.hash()
+            );
+            query_fmd_key(&cli.url, &enc_key);
         }
     }
 }
@@ -103,6 +121,16 @@ mod tests {
         let mut csprng = rand_core::OsRng;
         let mut compact_multi_fmd2 = MultiFmd2CompactScheme::new(GAMMA, 1);
         let (cmp_sk, cmp_pk) = compact_multi_fmd2.generate_keys(&mut csprng);
-        panic!("Secret key: {cmp_sk}");
+        //panic!("Secret key: {cmp_sk}");
+    }
+
+    #[test]
+    fn hexify() {
+        let bytes = [
+            157, 197, 229, 33, 99, 26, 130, 151, 128, 165, 205, 183, 226, 52, 137, 34, 175, 239,
+            253, 159, 228, 225, 6, 15, 8, 98, 241, 135, 164, 201, 132, 60,
+        ];
+        let hx = hex::encode(&bytes);
+        panic!("Key hash: {hx}");
     }
 }

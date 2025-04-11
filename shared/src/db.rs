@@ -9,15 +9,17 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 /// A wrapper around a ChaCha key
 ///
 /// Used to encrypted enclave responses for users
+#[derive(Debug, Clone)]
 pub struct EncKey(Key);
 
 impl EncKey {
     /// Get the hash of this key
-    pub fn hash(&self) -> [u8; 32] {
+    pub fn hash(&self) -> alloc::string::String {
         use sha2::Digest;
         let mut hasher = sha2::Sha256::new();
         hasher.update(self.0.as_slice());
-        hasher.finalize().into()
+        let hash: [u8; 32] = hasher.finalize().into();
+        hex::encode(hash)
     }
 }
 
@@ -113,13 +115,33 @@ impl Index {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IndexList(alloc::vec::Vec<Index>);
+
+impl IndexList {
+    /// Try to parse bytes into a list of indices
+    pub fn try_from_bytes(bytes: &[u8]) -> Option<Self> {
+        if 12 * (bytes.len() / 12) != bytes.len() {
+            return None;
+        }
+        let len = bytes.len() / 12;
+        let indices: alloc::vec::Vec<_> =
+            bytes.chunks(12).filter_map(Index::try_from_bytes).collect();
+        if indices.len() != len {
+            None
+        } else {
+            Some(Self(indices))
+        }
+    }
+}
+
 /// The response from the enclave for performing
 /// FMD for a particular uses
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptedResponse {
     /// Hash of user's encryption key used to identify
     /// when database entries belong to them
-    pub owner: [u8; 32],
+    pub owner: alloc::string::String,
     /// Nonce needed to decrypt the indices
     pub nonce: [u8; 12],
     /// encrypted indices

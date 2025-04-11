@@ -97,6 +97,9 @@ pub enum ClientMsg {
     RATLSAck(AckType),
     /// Request the host's UUID
     RequestUUID,
+    RequestIndices {
+        key_hash: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -115,6 +118,7 @@ pub enum ServerMsg {
     Error(String),
     KeyRegSuccess,
     UUID(String),
+    IndicesResponse(EncryptedResponse),
 }
 
 impl<'a> TryFrom<&'a ClientMsg> for MsgFromHost {
