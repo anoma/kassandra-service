@@ -28,6 +28,9 @@ pub struct DB {
     fmd: Connection,
     /// A handle to the job updating the MASP DB
     updating: Option<tokio::task::JoinHandle<Result<(), eyre::Error>>>,
+    /// A channel the fetch job uses to communicate to which block height
+    /// we are completely synced.
+    synced_to: Option<tokio::sync::watch::Receiver<u64>>,
 }
 
 impl DB {
@@ -93,6 +96,7 @@ impl DB {
                 masp,
                 fmd,
                 updating: None,
+                synced_to: None,
             },
             uuid,
         ))
@@ -180,7 +184,8 @@ impl DB {
     ) -> eyre::Result<()> {
         let masp_db_path = kassandra_dir().join(MASP_DB_PATH);
         let conn = Connection::open(masp_db_path).wrap_err("Failed to creat MASP DB table")?;
-        let mut fetcher = Fetcher::new(url, conn, max_wal_size)?;
+        let (send, recv) = tokio::sync::watch::channel(1u64);
+        let mut fetcher = Fetcher::new(url, conn, send, max_wal_size)?;
         let handle = tokio::task::spawn(async move {
             let ret = fetcher.run().await;
             fetcher.save();
@@ -188,7 +193,16 @@ impl DB {
             ret
         });
         self.updating = Some(handle);
+        self.synced_to = Some(recv);
         Ok(())
+    }
+
+    /// Get the block height we are synced up to compeletly
+    pub fn synced_to(&self) -> u64 {
+        let Some(recv) = &self.synced_to else {
+            return 1;
+        };
+        *recv.borrow()
     }
 
     pub async fn close(mut self) {

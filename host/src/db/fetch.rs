@@ -144,11 +144,18 @@ pub struct Fetcher {
     state: FetcherState,
     /// Listens for interrupt signals
     shutdown_signal: ShutdownSignalChan,
+    /// A channel to communicate the block height synced to completely
+    synced_to: tokio::sync::watch::Sender<u64>,
 }
 
 impl Fetcher {
     /// Create a new fetcher
-    pub fn new(url: reqwest::Url, conn: Connection, max_wal_size: usize) -> eyre::Result<Self> {
+    pub fn new(
+        url: reqwest::Url,
+        conn: Connection,
+        synced_to: tokio::sync::watch::Sender<u64>,
+        max_wal_size: usize,
+    ) -> eyre::Result<Self> {
         let indexer_client = reqwest::Client::builder()
             .connect_timeout(Duration::from_secs(60))
             .build()
@@ -180,6 +187,7 @@ impl Fetcher {
             interrupt_flag: Default::default(),
             state: FetcherState::Normal,
             shutdown_signal,
+            synced_to,
         })
     }
 
@@ -275,6 +283,9 @@ impl Fetcher {
         match fetched {
             Ok((from, to, fetched)) => {
                 self.fetched.insert(from, to);
+                // update the block height we are completely synced up to
+                // N.B. this subtraction is safe
+                _ = self.synced_to.send(self.fetched.first().0 - 1);
                 self.conn.extend(fetched);
                 None
             }

@@ -69,8 +69,8 @@ where
                     let heights = registered_keys.iter().map(|(_, ixs)| ixs.next()).collect();
                     ctx.com.write(&MsgToHost::BlockRequests(heights));
                 }
-                MsgFromHost::RequestedFlags(flags) => {
-                    let response = check_flags(&mut ctx, &mut registered_keys, flags);
+                MsgFromHost::RequestedFlags { synced_to, flags } => {
+                    let response = check_flags(&mut ctx, &mut registered_keys, synced_to, flags);
                     ctx.com.write(&response);
                 }
                 _ => {}

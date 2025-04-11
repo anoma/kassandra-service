@@ -88,6 +88,7 @@ impl IndexSet {
 pub fn check_flags<RA, COM, RNG>(
     ctx: &mut Ctx<RA, COM, RNG>,
     registered_keys: &mut [(FmdKeyRegistration, IndexSet)],
+    synced_to: u64,
     flags: Vec<(Index, Option<FlagCiphertexts>)>,
 ) -> MsgToHost
 where
@@ -97,7 +98,10 @@ where
 {
     let scheme = MultiFmd2CompactScheme::new(GAMMA, 1);
     let mut response = MsgToHost::FmdResults(Vec::new());
-    for (key, indices) in registered_keys.iter_mut() {
+    for (key, indices) in registered_keys
+        .iter_mut()
+        .filter(|(_, ix)| ix.synced_to < synced_to)
+    {
         for (ix, flag) in flags
             .iter()
             .filter(|(ix, _)| ix.height == indices.synced_to + 1)
