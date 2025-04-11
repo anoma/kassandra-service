@@ -21,8 +21,8 @@ transactions. FMD is designed so that it can be performed by untrusted third par
 
 ## Components
 
-This repo contains both server and client code. The server is further divided into two processes: the `host` and 
-`enclave`. The ability to restrict the anonymity set of a user's transactions is considered sensitive, although
+This repo contains both server and [client](./client) code. The server is further divided into two processes: the [host](./host) and 
+[enclave](./enclave). The ability to restrict the anonymity set of a user's transactions is considered sensitive, although
 not security critical. As such, it is possible to entrust the data necessary to perform FMD to a [trusted execution 
 environment](https://en.wikipedia.org/wiki/Trusted_execution_environment) (henceforth, TEE) via an encrypted channel.
 

@@ -109,28 +109,3 @@ fn encryption_key(csk_key: &CompactSecretKey, salt: &str) -> EncKey {
     let enc_key: Key = encryption_key.into();
     enc_key.into()
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::GAMMA;
-    use fmd::FmdKeyGen;
-    use fmd::fmd2_compact::MultiFmd2CompactScheme;
-
-    #[test]
-    fn generate_fmd_key() {
-        let mut csprng = rand_core::OsRng;
-        let mut compact_multi_fmd2 = MultiFmd2CompactScheme::new(GAMMA, 1);
-        let (cmp_sk, cmp_pk) = compact_multi_fmd2.generate_keys(&mut csprng);
-        //panic!("Secret key: {cmp_sk}");
-    }
-
-    #[test]
-    fn hexify() {
-        let bytes = [
-            157, 197, 229, 33, 99, 26, 130, 151, 128, 165, 205, 183, 226, 52, 137, 34, 175, 239,
-            253, 159, 228, 225, 6, 15, 8, 98, 241, 135, 164, 201, 132, 60,
-        ];
-        let hx = hex::encode(&bytes);
-        panic!("Key hash: {hx}");
-    }
-}
