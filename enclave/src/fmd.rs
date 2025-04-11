@@ -67,6 +67,7 @@ impl IndexSet {
                         owner: enc_key.hash(),
                         nonce: *nonce.as_ref(),
                         indices,
+                        height: self.synced_to,
                     });
                     MsgToHost::FmdResults(results)
                 }
@@ -113,11 +114,11 @@ where
                 indices.indices.push(*ix);
             }
         }
-        indices.advance();
         let mut nonce_bytes = [0u8; 12];
         ctx.rng.fill_bytes(&mut nonce_bytes);
         let nonce = Nonce::from(nonce_bytes);
         response = indices.add_result(&key.enc_key, nonce, response);
+        indices.advance();
     }
     response
 }

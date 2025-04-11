@@ -146,4 +146,6 @@ pub struct EncryptedResponse {
     pub nonce: [u8; 12],
     /// encrypted indices
     pub indices: alloc::vec::Vec<u8>,
+    /// The last height FMD was performed at
+    pub height: u64,
 }

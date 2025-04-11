@@ -44,6 +44,7 @@ pub fn query_fmd_key(url: &str, enc_key: &EncKey) {
             panic!("Could not deserialize decrypted response as MASP indices");
         }
         Some(list) => {
+            tracing::info!("Synced to height: {}", encrypted.height);
             let indices = serde_json::to_string_pretty(&list).unwrap();
             tracing::info!("{}", indices);
         }

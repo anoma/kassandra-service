@@ -64,7 +64,8 @@ impl DB {
                 "CREATE TABLE Indices (
                 owner TEXT NOT NULL PRIMARY KEY,
                 nonce BLOB NOT NULL,
-                idx_set BLOB NOT NULL
+                idx_set BLOB NOT NULL,
+                height: INTEGER NOT NULL
             )",
                 (),
             )
@@ -144,15 +145,16 @@ impl DB {
     pub fn update_indices(&mut self, new_indices: Vec<EncryptedResponse>) -> eyre::Result<()> {
         let mut stmt = self
             .fmd
-            .prepare("INSERT OR REPLACE INTO Indices(nonce, idx_set, owner) VALUES (?1, ?2, ?3)")
+            .prepare("INSERT OR REPLACE INTO Indices(nonce, idx_set, owner, height) VALUES (?1, ?2, ?3, ?4)")
             .unwrap();
         for EncryptedResponse {
             owner,
             nonce,
             indices,
+            height,
         } in new_indices
         {
-            stmt.execute((nonce, indices, owner))
+            stmt.execute((nonce, indices, owner, height))
                 .wrap_err("Could not update FMD db")?;
         }
         Ok(())
@@ -160,18 +162,19 @@ impl DB {
 
     /// Get the encrypted index set belonging to a registered key
     pub fn fetch_indices(&self, user: &str) -> eyre::Result<EncryptedResponse> {
-        let (owner, n, indices) = self
+        let (owner, n, indices, height) = self
             .fmd
-            .query_row::<(String, Vec<u8>, Vec<u8>), _, _>(
-                "SELECT owner, nonce, idx_set FROM Indices WHERE owner=?1",
+            .query_row::<(String, Vec<u8>, Vec<u8>, u64), _, _>(
+                "SELECT owner, nonce, idx_set, height FROM Indices WHERE owner=?1",
                 rusqlite::params![user],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
             )
             .wrap_err("Could not find user's key hash in the DB")?;
         Ok(EncryptedResponse {
             owner,
             nonce: n.try_into().unwrap(),
             indices,
+            height,
         })
     }
 
