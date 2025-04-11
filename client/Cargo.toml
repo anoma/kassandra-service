@@ -18,7 +18,7 @@ curve25519-dalek.workspace = true
 fmd  = { workspace = true, features = ["serde"] }
 hex = "0.4.3"
 hkdf = "0.12.4"
-rand_core.workspace = true
+rand_core = {workspace = true, features = ["getrandom"] }
 serde_cbor.workspace = true
 serde_json = { version = "1.0.140", default-features = false, features = ["alloc"] }
 sha2.workspace = true

@@ -53,10 +53,18 @@ pub(crate) fn register_fmd_key<C: EnclaveClient>(
     // validate remote attestation certificates
     let report = match stream.read() {
         Ok(ServerMsg::RATLS { report }) => report,
-        Ok(ServerMsg::Error(err)) => panic!("{err}"),
-        _ => panic!(
-            "Establishing RA-TLS connection failed: Could not parse service response as RA report."
-        ),
+        Ok(ServerMsg::Error(err)) => {
+            tracing::error!("Error reported by server: {err}");
+            panic!("{err}")
+        }
+        _ => {
+            tracing::error!(
+                "Establishing RA-TLS connection failed: Could not parse service response as RA report."
+            );
+            panic!(
+                "Establishing RA-TLS connection failed: Could not parse service response as RA report."
+            )
+        }
     };
 
     let report_data = match C::verify_quote(&report, nonce) {
@@ -103,5 +111,6 @@ pub(crate) fn register_fmd_key<C: EnclaveClient>(
 
 fn abort_tls(mut stream: OutgoingTcp, msg: &str) -> ! {
     stream.write(ClientMsg::RATLSAck(AckType::Fail));
+    tracing::error!(msg);
     panic!("{}", msg);
 }
