@@ -4,14 +4,12 @@
 extern crate alloc;
 mod com;
 
-use alloc::string::ToString;
 use alloc::vec::Vec;
 use drbg::ctr::{CtrBuilder, CtrDrbg};
 use drbg::entropy::Entropy;
 use ostd::arch::x86::qemu::{exit_qemu, QemuExitCode};
 use ostd::prelude::*;
 use rand_core::{CryptoRng, Error, RngCore};
-use shared::{MsgFromHost, MsgToHost};
 use shared::tee::{EnclaveRNG, RemoteAttestation};
 use tdx_quote::{Quote, SigningKey};
 
@@ -57,7 +55,7 @@ impl RngCore for Rng {
     }
 
     fn next_u64(&mut self) -> u64 {
-        let mut bytes = [0u8; 16];
+        let mut bytes = [0u8; 8];
         self.fill_bytes(&mut bytes);
         u64::from_le_bytes(bytes)
     }
@@ -78,8 +76,6 @@ impl Clone for Rng {
         Self::init()
     }
 }
-
-impl Copy for Rng {}
 
 impl EnclaveRNG for Rng {
     fn init() -> Self {

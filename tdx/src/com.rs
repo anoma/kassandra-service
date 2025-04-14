@@ -16,11 +16,6 @@ static HOST_COM: Mutex<SerialPort> = Mutex::new(
 );
 
 impl HostCom {
-    /// Initialize the connection
-    pub fn init() {
-
-    }
-
     /// Write a buffer of bytes to the serial port
     pub fn write_bytes(buf: &[u8]) {
         let com = HOST_COM.lock();
@@ -111,6 +106,7 @@ impl ReadWriteByte for HostCom {
 impl EnclaveComm for HostCom {
     fn init() -> Self {
         HOST_COM.lock().init();
+        Self
     }
 
     fn read(&mut self) -> Result<MsgFromHost, MsgError> {

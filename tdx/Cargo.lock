@@ -449,10 +449,12 @@ version = "0.0.1"
 dependencies = [
  "drbg",
  "fmd-enclave-service",
+ "getrandom",
  "ostd",
  "rand_core",
  "shared",
  "tdx-quote",
+ "x25519-dalek",
 ]
 
 [[package]]
