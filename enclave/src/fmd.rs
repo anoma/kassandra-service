@@ -6,13 +6,13 @@ use alloc::vec::Vec;
 use chacha20poly1305::aead::Aead;
 use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
 use fmd::MultiFmdScheme;
-use fmd::fmd2_compact::{FlagCiphertexts, MultiFmd2CompactScheme};
+use fmd::fmd2_compact::FlagCiphertexts;
 use shared::MsgToHost;
 use shared::db::{EncKey, EncryptedResponse, Index};
 use shared::ratls::FmdKeyRegistration;
 use shared::tee::{EnclaveComm, EnclaveRNG, RemoteAttestation};
 
-use crate::{Ctx, GAMMA};
+use crate::Ctx;
 
 /// The current status of which MASP txs a user
 /// should trial decrypt

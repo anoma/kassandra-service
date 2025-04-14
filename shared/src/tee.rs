@@ -53,6 +53,6 @@ pub trait EnclaveComm: FramedBytes {
 }
 
 /// Stricter requirements on an RNG source
-pub trait EnclaveRNG: RngCore + CryptoRng + Copy + Clone {
+pub trait EnclaveRNG: RngCore + CryptoRng + Clone {
     fn init() -> Self;
 }

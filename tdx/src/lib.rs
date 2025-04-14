@@ -100,7 +100,7 @@ impl Entropy for Seed {
         let mut seed = 0u64;
         for ix in 0..bytes.len() {
             if ix.rem_euclid(4) == 0 {
-                while core::arch::x86_64::_rdseed64_step(&mut seed) != 1 {}
+                unsafe { while core::arch::x86_64::_rdseed64_step(&mut seed) != 1 {} }
                 core::hint::spin_loop();
             }
             bytes[ix] = seed.to_le_bytes()[ix.rem_euclid(4)];
