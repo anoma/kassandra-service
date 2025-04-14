@@ -65,7 +65,7 @@ impl DB {
                 owner TEXT NOT NULL PRIMARY KEY,
                 nonce BLOB NOT NULL,
                 idx_set BLOB NOT NULL,
-                height: INTEGER NOT NULL
+                height INTEGER NOT NULL
             )",
                 (),
             )

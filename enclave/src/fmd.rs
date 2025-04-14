@@ -97,7 +97,6 @@ where
     COM: EnclaveComm,
     RNG: EnclaveRNG,
 {
-    let scheme = MultiFmd2CompactScheme::new(GAMMA, 1);
     let mut response = MsgToHost::FmdResults(Vec::new());
     for (key, indices) in registered_keys
         .iter_mut()
@@ -109,7 +108,7 @@ where
         {
             if match flag {
                 None => true,
-                Some(flag) => scheme.detect(&key.fmd_key, flag),
+                Some(flag) => ctx.scheme.detect(&key.fmd_key, flag),
             } {
                 indices.indices.push(*ix);
             }

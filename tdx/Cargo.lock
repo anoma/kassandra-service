@@ -24,6 +24,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "aes"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b169f7a6d4742236a0a00c541b845991d0ac43e546831af1249753ab4c3aa3a0"
+dependencies = [
+ "cfg-if",
+ "cipher",
+ "cpufeatures",
+]
+
+[[package]]
 name = "align_ext"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -325,6 +336,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "drbg"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06ccf508ba66398c23197cae08d0febae05b7ed9abcaccefcd48fa68c930c96c"
+dependencies = [
+ "aes",
+ "getrandom",
+]
+
+[[package]]
 name = "ecdsa"
 version = "0.16.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -426,6 +447,7 @@ dependencies = [
 name = "fmd-tdx-enclave-service"
 version = "0.0.1"
 dependencies = [
+ "drbg",
  "fmd-enclave-service",
  "ostd",
  "rand_core",

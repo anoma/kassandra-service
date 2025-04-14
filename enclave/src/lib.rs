@@ -3,7 +3,7 @@ extern crate alloc;
 
 use alloc::string::ToString;
 use alloc::vec::Vec;
-
+use ::fmd::fmd2_compact::MultiFmd2CompactScheme;
 use shared::tee::{EnclaveComm, EnclaveRNG, RemoteAttestation};
 use shared::{MsgFromHost, MsgToHost};
 
@@ -21,6 +21,7 @@ where
     ra: RA,
     com: COM,
     rng: RNG,
+    scheme: MultiFmd2CompactScheme,
 }
 
 impl<RA, COM, RNG> Ctx<RA, COM, RNG>
@@ -34,6 +35,7 @@ where
             ra: RA::init(),
             com: COM::init(),
             rng: RNG::init(),
+            scheme: MultiFmd2CompactScheme::new(GAMMA, 1),
         }
     }
 }
