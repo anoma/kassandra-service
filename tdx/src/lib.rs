@@ -4,13 +4,14 @@
 extern crate alloc;
 mod com;
 
-use alloc::string::ToString;
 use alloc::vec::Vec;
-
+use drbg::ctr::{CtrBuilder, CtrDrbg};
+use drbg::entropy::Entropy;
 use ostd::arch::x86::qemu::{exit_qemu, QemuExitCode};
 use ostd::prelude::*;
-use shared::{MsgFromHost, MsgToHost};
+use rand_core::{CryptoRng, Error, RngCore};
 use shared::tee::{EnclaveRNG, RemoteAttestation};
+#[cfg(feature = "mock")]
 use tdx_quote::{Quote, SigningKey};
 
 use crate::com::HostCom;
@@ -43,33 +44,25 @@ impl RemoteAttestation for Tdx {
     }
 }
 
-use rand_core::{CryptoRng, Error, RngCore};
-
-
-#[derive(Copy, Clone)]
-struct Rng;
+struct Rng {
+    inner: CtrDrbg<Seed>,
+}
 
 impl RngCore for Rng {
     fn next_u32(&mut self) -> u32 {
-        let r = self.next_u64().to_le_bytes();
-        u32::from_le_bytes([r[0], r[1], r[2], r[3]])
+        let mut bytes = [0u8; 4];
+        self.fill_bytes(&mut bytes);
+        u32::from_le_bytes(bytes)
     }
 
     fn next_u64(&mut self) -> u64 {
-        ostd::arch::x86::read_random().unwrap()
+        let mut bytes = [0u8; 8];
+        self.fill_bytes(&mut bytes);
+        u64::from_le_bytes(bytes)
     }
 
     fn fill_bytes(&mut self, dst: &mut [u8]) {
-        let mut ix = 0;
-        let mut r = self.next_u64().to_le_bytes().to_vec();
-
-        while let Some(b) = dst.get_mut(ix) {
-            if r.is_empty() {
-                r = self.next_u64().to_le_bytes().to_vec();
-            }
-            *b = r.pop().unwrap();
-            ix += 1;
-        }
+        self.inner.fill_bytes(dst, None).unwrap()
     }
 
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> core::result::Result<(), Error> {
@@ -79,8 +72,36 @@ impl RngCore for Rng {
 
 impl CryptoRng for Rng {}
 
+impl Clone for Rng {
+    fn clone(&self) -> Self {
+        Self::init()
+    }
+}
+
 impl EnclaveRNG for Rng {
     fn init() -> Self {
-        Self
+        Self {
+            inner: CtrBuilder::new(Seed)
+                .personal("TDX pseudo-random number generator".as_bytes())
+                .build()
+                .unwrap()
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+struct Seed;
+
+impl Entropy for Seed {
+    fn fill_bytes(&mut self, bytes: &mut [u8]) -> core::result::Result<(), drbg::entropy::Error> {
+        let mut seed = 0u64;
+        for ix in 0..bytes.len() {
+            if ix.rem_euclid(4) == 0 {
+                unsafe { while core::arch::x86_64::_rdseed64_step(&mut seed) != 1 {} }
+                core::hint::spin_loop();
+            }
+            bytes[ix] = seed.to_le_bytes()[ix.rem_euclid(4)];
+        }
+        Ok(())
     }
 }

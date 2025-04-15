@@ -33,7 +33,7 @@ where
     RNG: EnclaveRNG,
 {
     // create a new connection and get the public ephemeral key
-    let conn = Connection::new(ctx.rng);
+    let conn = Connection::new(ctx.rng.clone());
     let enclave_pk = if let Connection::Handshake { ephemeral_key } = &conn {
         x25519_dalek::PublicKey::from(ephemeral_key)
     } else {

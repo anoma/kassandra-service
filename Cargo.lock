@@ -5394,7 +5394,8 @@ dependencies = [
 [[package]]
 name = "polyfuzzy"
 version = "0.1.0"
-source = "git+https://github.com/anoma/shielded-state-sync#37ad93f1ced5c7b1c68afa6310abf1f731fec4ce"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4c8aa1a6ea51b5f6cb5053fd11ff19f71ba5ef5f9e99709aded1c030ddb4874"
 dependencies = [
  "curve25519-dalek",
  "rand_core",
