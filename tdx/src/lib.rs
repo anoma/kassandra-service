@@ -11,6 +11,7 @@ use ostd::arch::x86::qemu::{exit_qemu, QemuExitCode};
 use ostd::prelude::*;
 use rand_core::{CryptoRng, Error, RngCore};
 use shared::tee::{EnclaveRNG, RemoteAttestation};
+#[cfg(feature = "mock")]
 use tdx_quote::{Quote, SigningKey};
 
 use crate::com::HostCom;

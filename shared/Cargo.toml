@@ -15,7 +15,7 @@ hex.workspace = true
 rand_core.workspace = true
 serde.workspace = true
 serde_cbor.workspace = true
-sha2 = {workspace = true, features = ["force-soft"]}
+sha2.workspace = true
 tdx-quote = { version = "0.0.3", default-features = false }
 thiserror.workspace = true
 x25519-dalek.workspace = true
