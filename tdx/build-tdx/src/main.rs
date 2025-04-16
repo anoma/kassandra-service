@@ -72,11 +72,10 @@ fn build(features: Option<String>, target: Option<String>, release: bool) {
     if release {
         cargo.arg("--profile=release");
     }
+
     let target_dir = std::env::current_dir()
         .unwrap()
-        .join("target")
-        .canonicalize()
-        .unwrap();
+        .join("target");
     cargo.arg("--target-dir")
         .arg(target_dir);
     println!("Running commond:\n {:?}", cargo);
