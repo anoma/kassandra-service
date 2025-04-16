@@ -98,7 +98,10 @@ fn run(features: Option<String>, target: Option<String>, release: bool) {
     let Value::String(args) = &config["qemu"]["args"] else {
         panic!("Could not parse qemu args for OSDK.toml");
     };
-    let args = args.split(' ').collect::<Vec<_>>();
+    let mut args = args.split(' ').collect::<Vec<_>>();
+    if Some("") ==args.last().map(|v| &**v) {
+        args.pop();
+    }
     let mut command = Command::new("qemu-system-x86_64");
     command.current_dir(std::env::current_dir().unwrap().canonicalize().unwrap());
     let image = std::env::current_dir()
