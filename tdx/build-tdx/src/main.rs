@@ -1,7 +1,7 @@
 use std::process;
 use std::process::Command;
 
-use clap::{Parser, Subcommand};
+use clap::{arg, Parser, Subcommand};
 use toml::{Table, Value};
 
 #[derive(Parser)]
@@ -93,10 +93,11 @@ fn build(features: Option<String>, target: Option<String>, release: bool) {
 fn run(features: Option<String>, target: Option<String>, release: bool) {
     let config = std::fs::read_to_string("OSDK.toml").unwrap().parse::<Table>().unwrap();
     let Value::String(args) = &config["qemu"]["args"] else {
-        panic!("Could not parse the Qemu args in OSDK.toml");
+        panic!();
     };
+    let args = args.split(' ').collect::<Vec<_>>();
     let mut command = Command::new("qemu-system-x86_64");
-    command.arg(args);
+    command.args(args);
     println!("Running command:\n {:?}", command);
     let status = command.status().unwrap();
     if !status.success() {
