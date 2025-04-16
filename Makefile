@@ -4,9 +4,10 @@ build-tdx:
 	env RUST_BACKTRACE=1 OSDK_TARGET=$(shell readlink -f tdx/x86_64-unknown-none.json) cargo osdk build --release
 
 build-mock-tdx:
-	cd tdx && \
-	env RUST_BACKTRACE=1 OSDK_TARGET=$(shell readlink -f tdx/x86_64-unknown-none.json) cargo osdk build --scheme tdx --release --features "mock"
-
+	cd tdx/build-tdx && \
+	cargo build -r && \
+	cd .. && \
+	env RUST_BACKTRACE=1 ./build-tdx/target/release/build-tdx ---target $(shell readlink -f tdx/x86_64-unknown-none.json)--release --features "mock" build
 run-tdx:
 	cd tdx && \
 	env RUST_BACKTRACE=1 OSDK_TARGET=$(shell readlink -f tdx/x86_64-unknown-none.json) cargo osdk run --release
