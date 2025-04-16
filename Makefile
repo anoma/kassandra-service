@@ -16,14 +16,14 @@ run-tdx:
 	cd tdx/build-tdx && \
 	cargo build -r && \
 	cd .. && \
-	env RUST_BACKTRACE=1 ./build-tdx/target/release/build-tdx --target $(shell readlink -f tdx/x86_64-unknown-none.json) run --release --features "mock"
+	env RUST_BACKTRACE=1 ./build-tdx/target/release/build-tdx --target $(shell readlink -f tdx/x86_64-unknown-none.json) --release --features "mock" run
 
 run-mock-tdx:
 	cp /usr/share/OVMF/OVMF_VARS.fd tdx/
 	cd tdx/build-tdx && \
 	cargo build -r && \
 	cd .. && \
-	env RUST_BACKTRACE=1 ./build-tdx/target/release/build-tdx --target $(shell readlink -f tdx/x86_64-unknown-none.json) run --release --features "mock"
+	env RUST_BACKTRACE=1 ./build-tdx/target/release/build-tdx --target $(shell readlink -f tdx/x86_64-unknown-none.json) --release --features "mock" run
 
 build:
 	cargo build
