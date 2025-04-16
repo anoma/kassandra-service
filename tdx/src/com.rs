@@ -24,27 +24,6 @@ impl HostCom {
         }
     }
 
-    /// If data is available on the port, attempts to read it and
-    /// deserialize it, which is blocking. If no data is available,
-    /// it does not wait but returns immediately.
-    pub fn try_read() -> Result<Option<MsgFromHost>, MsgError> {
-        if let Some(frame) = Self::try_read_frame()? {
-            frame.deserialize()
-        } else {
-            Ok(None)
-        }
-    }
-
-    pub fn read_string() -> Result<alloc::string::String, MsgError> {
-        let mut bytes = vec![];
-        while bytes.is_empty() {
-            while HOST_COM.lock().line_status() & 1 == 1 {
-                bytes.push(Self::read_byte());
-            }
-        }
-        alloc::string::String::from_utf8(bytes.clone()).map_err(|_| MsgError::Utf8(bytes))
-    }
-
     /// Block until a byte is read
     fn read_byte() -> u8 {
         let com = HOST_COM.lock();
@@ -53,19 +32,6 @@ impl HostCom {
                 break com.recv();
             }
             core::hint::spin_loop();
-        }
-    }
-
-    /// Method to read framed bytes from the serial port.
-    ///
-    /// If there is no data from the port, returns nothing. Otherwise,
-    /// blocks until an entire frame is read or error occurs.
-    fn try_read_frame() -> Result<Option<Frame>, MsgError> {
-        // check if data is available, otherwise return early
-        if HOST_COM.lock().line_status() & 1 != 1 {
-            Ok(None)
-        } else {
-            Ok(Some(Self::get_frame()?))
         }
     }
 

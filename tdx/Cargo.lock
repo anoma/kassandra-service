@@ -166,12 +166,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "const-assert"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8298db53081b3a951cadb6e0f4ebbe36def7bcb591a34676708d0d7ac87dd86"
-
-[[package]]
 name = "const-oid"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -644,9 +638,9 @@ checksum = "8355be11b20d696c8f18f6cc018c4e372165b1fa8126cef092399c9951984ffa"
 
 [[package]]
 name = "linux-boot-params"
-version = "0.11.3"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0026f51c05bde25373e5dbe763f62a4d9a1e24db3bc72dbba27e21c9bbc646b4"
+checksum = "b1c640ed8046a8f338515733775c56b8f60d05905f6ebd15633ae3a572a490c8"
 
 [[package]]
 name = "lock_api"
@@ -817,9 +811,9 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "ostd"
-version = "0.11.3"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8108282c1dd3f25147216fc62af301ebe779dffbf02933ca752981ec14589154"
+checksum = "1b52958fa698faabcbd0f57d718140d6e3ea9071b683079339fd1fdc7360937e"
 dependencies = [
  "acpi",
  "align_ext",
@@ -827,7 +821,6 @@ dependencies = [
  "bitflags 1.3.2",
  "buddy_system_allocator",
  "cfg-if",
- "const-assert",
  "fdt",
  "gimli 0.28.1",
  "iced-x86",
@@ -848,7 +841,6 @@ dependencies = [
  "sbi-rt",
  "smallvec",
  "spin",
- "static_assertions",
  "tdx-guest",
  "unwinding",
  "volatile 0.6.1",
@@ -859,9 +851,9 @@ dependencies = [
 
 [[package]]
 name = "ostd-macros"
-version = "0.11.3"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "308fd6d8e5ade54ac14cd7fc6531cc68646362934c41f5c40e53648cc8109ab4"
+checksum = "388356c8e1120ac49d55d0374d17b0890b76b0f6c8dc159bcbd9065a84890431"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -891,9 +883,9 @@ dependencies = [
 
 [[package]]
 name = "ostd-test"
-version = "0.11.3"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8e9fbb0160400dd4d5a149c5e78b6602c2d1c431e61e17d9cbcee4e4a434d17"
+checksum = "c3f0d945290f5004f95d328f16c1a46d272d6081c4736e8bbc3d489a79bc6503"
 
 [[package]]
 name = "p256"
@@ -963,7 +955,8 @@ dependencies = [
 [[package]]
 name = "polyfuzzy"
 version = "0.1.0"
-source = "git+https://github.com/anoma/shielded-state-sync#37ad93f1ced5c7b1c68afa6310abf1f731fec4ce"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4c8aa1a6ea51b5f6cb5053fd11ff19f71ba5ef5f9e99709aded1c030ddb4874"
 dependencies = [
  "curve25519-dalek",
  "rand_core",
@@ -1263,12 +1256,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "static_assertions"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
-
-[[package]]
 name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1310,9 +1297,9 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "tdx-guest"
-version = "0.1.9"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc94858c8c00b46ad1a46e19f3f1e72ae4e1f7fa2d702d6867d606a2c8473b9e"
+checksum = "3792a8dc443107e37c3804c655a4807605c8b275e986b0f08add336f01e49685"
 dependencies = [
  "bitflags 1.3.2",
  "iced-x86",
