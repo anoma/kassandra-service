@@ -47,7 +47,7 @@ fn build(features: Option<String>, target: Option<String>, release: bool) {
     let env_rustflags = std::env::var("RUSTFLAGS").unwrap_or_default();
     let rustflags = vec![
         &env_rustflags,
-        "-C link-args=-Tx86_64.ld",
+        "-C link-arg=-Tx86_64.ld",
         "-C relocation-model=static",
         "-C relro-level=off",
         "-C force-unwind-tables=yes",
@@ -72,9 +72,15 @@ fn build(features: Option<String>, target: Option<String>, release: bool) {
     if release {
         cargo.arg("--profile=release");
     }
-    let target_dir = std::env::current_dir().unwrap().join("target");
+    let target_dir = std::env::current_dir()
+        .unwrap()
+        .join("tdx")
+        .join("target")
+        .canonicalize()
+        .unwrap();
     cargo.arg("--target-dir")
         .arg(target_dir);
+    println!("Running commond:\n {:?}", cargo);
     let status = cargo.status().unwrap();
     if !status.success() {
         println!("Build failed: {status}");
