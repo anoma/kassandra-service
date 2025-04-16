@@ -110,6 +110,7 @@ fn run(features: Option<String>, target: Option<String>, release: bool) {
         .canonicalize()
         .unwrap();
     let image = image.to_string_lossy();
+    command.arg("-drive");
     command.arg(format!("file={image},format=raw,index=2,media=cdrom"));
     command.args(args);
 
