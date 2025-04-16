@@ -74,7 +74,6 @@ fn build(features: Option<String>, target: Option<String>, release: bool) {
     }
     let target_dir = std::env::current_dir()
         .unwrap()
-        .join("tdx")
         .join("target")
         .canonicalize()
         .unwrap();
