@@ -2,6 +2,7 @@ use std::process;
 use std::process::Command;
 
 use clap::{Parser, Subcommand};
+use toml::{Table, Value};
 
 #[derive(Parser)]
 #[command(version, about, long_about=None)]
@@ -29,13 +30,16 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     #[command(about = "Compile the current package")]
-    Build
+    Build,
+    #[command(about = "Run the current package")]
+    Run
 }
 
 fn main() {
     let cli = Cli::parse();
     match cli.command {
         Commands::Build => build(cli.features, cli.target, cli.release),
+        Commands::Run => run(cli.features, cli.target, cli.release),
     }
 
 
@@ -78,8 +82,23 @@ fn build(features: Option<String>, target: Option<String>, release: bool) {
         .join("target");
     cargo.arg("--target-dir")
         .arg(target_dir);
-    println!("Running commond:\n {:?}", cargo);
+    println!("Running command:\n {:?}", cargo);
     let status = cargo.status().unwrap();
+    if !status.success() {
+        println!("Build failed: {status}");
+        process::exit(1);
+    }
+}
+
+fn run(features: Option<String>, target: Option<String>, release: bool) {
+    let config = std::fs::read_to_string("OSDK.toml").unwrap().parse::<Table>().unwrap();
+    let Value::String(args) = &config["qemu"]["args"] else {
+        panic!("Could not parse the Qemu args in OSDK.toml");
+    };
+    let mut command = Command::new("qemu-system-x86_64");
+    command.arg(args);
+    println!("Running command:\n {:?}", command);
+    let status = command.status().unwrap();
     if !status.success() {
         println!("Build failed: {status}");
         process::exit(1);

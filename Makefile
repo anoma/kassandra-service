@@ -1,7 +1,9 @@
 
 build-tdx:
-	cd tdx && \
-	env RUST_BACKTRACE=1 OSDK_TARGET=$(shell readlink -f tdx/x86_64-unknown-none.json) cargo osdk build --release
+	cd tdx/build-tdx && \
+    	cargo build -r && \
+    	cd .. && \
+    	env RUST_BACKTRACE=1 ./build-tdx/target/release/build-tdx --target $(shell readlink -f tdx/x86_64-unknown-none.json) --release build
 
 build-mock-tdx:
 	cd tdx/build-tdx && \
