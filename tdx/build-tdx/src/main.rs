@@ -91,14 +91,29 @@ fn build(features: Option<String>, target: Option<String>, release: bool) {
 }
 
 fn run(features: Option<String>, target: Option<String>, release: bool) {
+    if !std::fs::exists("target").unwrap() {
+        build(features, target, release);
+    }
     let config = std::fs::read_to_string("OSDK.toml").unwrap().parse::<Table>().unwrap();
     let Value::String(args) = &config["qemu"]["args"] else {
-        panic!();
+        panic!("Could not parse qemu args for OSDK.toml");
     };
     let args = args.split(' ').collect::<Vec<_>>();
     let mut command = Command::new("qemu-system-x86_64");
+    command.current_dir(std::env::current_dir().unwrap().canonicalize().unwrap());
+    let image = std::env::current_dir()
+        .unwrap()
+        .join("target")
+        .join("osdk")
+        .join("fmd-tdx-enclave-service")
+        .join("fmd-tdx-enclave-service-osdk-bin.iso")
+        .canonicalize()
+        .unwrap();
+    let image = image.to_string_lossy();
+    command.arg(format!("file={image},format=raw,index=2,media=cdrom"));
     command.args(args);
-    println!("Running command:\n {:?}", command);
+
+    println!("Running command:\n {:#?}", command);
     let status = command.status().unwrap();
     if !status.success() {
         println!("Build failed: {status}");
