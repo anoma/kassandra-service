@@ -88,6 +88,7 @@ fn build(features: Option<String>, target: Option<String>, release: bool) {
         println!("Build failed: {status}");
         process::exit(1);
     }
+    create_bootdev_image();
 }
 
 fn create_bootdev_image() {
