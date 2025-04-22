@@ -88,16 +88,49 @@ fn build(features: Option<String>, target: Option<String>, release: bool) {
         println!("Build failed: {status}");
         process::exit(1);
     }
-    create_bootdev_image();
+    create_bootdev_image(release);
 }
 
-fn create_bootdev_image() {
+fn create_bootdev_image(release: bool) {
     let iso_root = std::env::current_dir()
         .unwrap()
         .join("target")
         .join("osdk")
         .join("iso_root");
+    if iso_root.exists() {
+        std::fs::remove_dir_all(iso_root).unwrap();
+    }
     std::fs::create_dir_all(iso_root.join("boot").join("grub")).unwrap();
+    let target_path = iso_root.join("boot").join(&target_name);
+    let bin_path = std::env::current_dir()
+        .unwrap()
+        .join("target")
+        .join("x86_64-unknown-none")
+        .join(if relase {"release"} else {"debug"})
+        .join("fmd-tdx-enclave-service-osdk-bin");
+    hard_link_or_copy(bin_path, target_path).unwrap();
+    let grub_cfg = r#"# AUTOMATICALLY GENERATED FILE, DO NOT EDIT UNLESS YOU KNOW WHAT YOU ARE DOING
+
+    # set debug=linux,efi,linuxefi
+
+    set timeout_style=hidden
+    set timeout=0
+
+    menuentry 'asterinas' {
+        multiboot2 /boot/fmd-tdx-enclave-service-osdk-bin --
+
+        boot
+    }
+    "#;
+    let grub_cfg_path = iso_root.join("boot").join("grub").join("grub.cfg");
+    fs::write(grub_cfg_path, grub_cfg).unwrap();
+}
+
+pub fn hard_link_or_copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<u64> {
+    if fs::hard_link(&from, &to).is_err() {
+        return fs::copy(from, to);
+    }
+    Ok(0)
 }
 
 fn run(features: Option<String>, target: Option<String>, release: bool) {
