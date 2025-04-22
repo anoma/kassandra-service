@@ -108,6 +108,8 @@ fn create_bootdev_image(release: bool) {
         .join("x86_64-unknown-none")
         .join(if release {"release"} else {"debug"})
         .join("fmd-tdx-enclave-service-osdk-bin");
+    println!("bin_path: {:?}", bin_path);
+    println!("target_path: {:?}", target_path);
     if std::fs::hard_link(&bin_path, &target_path).is_err() {
         std::fs::copy(bin_path, target_path).unwrap();
     }
