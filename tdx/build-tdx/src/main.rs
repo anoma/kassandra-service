@@ -1,9 +1,11 @@
+use clap::{Parser, Subcommand, arg};
 use std::path::{Path, PathBuf};
 use std::process;
 use std::process::Command;
 use std::str::FromStr;
-use clap::{arg, Parser, Subcommand};
 use toml::{Table, Value};
+
+const OSTD_VERSION: &str = "0.14.1";
 
 #[derive(Parser)]
 #[command(version, about, long_about=None)]
@@ -15,14 +17,13 @@ struct Cli {
         help = "Space or comma separated list of features to activate"
     )]
     features: Option<String>,
-    #[arg(
-        short,
-        long,
-        value_name = "TRIPLE",
-        help = "Build for target triple"
-    )]
+    #[arg(short, long, value_name = "TRIPLE", help = "Build for target triple")]
     target: Option<String>,
-    #[arg(long, short, help=" Build artifacts in release mode, with optimizations")]
+    #[arg(
+        long,
+        short,
+        help = " Build artifacts in release mode, with optimizations"
+    )]
     release: bool,
     #[command(subcommand)]
     command: Commands,
@@ -33,7 +34,7 @@ enum Commands {
     #[command(about = "Compile the current package")]
     Build,
     #[command(about = "Run the current package")]
-    Run
+    Run,
 }
 
 fn main() {
@@ -42,16 +43,21 @@ fn main() {
         Commands::Build => build(cli.features, cli.target, cli.release),
         Commands::Run => run(cli.features, cli.target, cli.release),
     }
-
-
 }
 
-
 fn build(features: Option<String>, target: Option<String>, release: bool) {
-    do_new_base_crate();
+    let base_crate = do_new_base_crate();
+    {
+        let _dir_guard = DirGuard::change_dir(&base_crate);
+        run_cargo(features, target, release);
+    }
+    create_bootdev_image(release);
+}
+
+fn run_cargo(features: Option<String>, target: Option<String>, release: bool) {
     let mut cargo = Command::new("cargo");
     let env_rustflags = std::env::var("RUSTFLAGS").unwrap_or_default();
-    let rustflags = vec![
+    let rustflags = [
         &env_rustflags,
         "-C link-arg=-Tx86_64.ld",
         "-C relocation-model=static",
@@ -66,33 +72,27 @@ fn build(features: Option<String>, target: Option<String>, release: bool) {
     cargo.env("RUSTFLAGS", rustflags.join(" "));
     cargo.arg("build");
     if let Some(features) = features {
-        cargo.arg("--features")
-            .arg(features);
+        cargo.arg("--features").arg(features);
     }
     if let Some(target) = target {
-        cargo.arg("--target")
-            .arg(target);
+        cargo.arg("--target").arg(target);
     }
-    cargo.arg("-Zbuild-std=core,alloc,compiler_builtins")
+    cargo
+        .arg("-Zbuild-std=core,alloc,compiler_builtins")
         .arg("-Zbuild-std-features=compiler-builtins-mem");
     if release {
         cargo.arg("--profile=release");
     }
 
-    let target_dir = std::env::current_dir()
-        .unwrap()
-        .join("target");
-    cargo.arg("--target-dir")
-        .arg(target_dir);
+    let target_dir = std::env::current_dir().unwrap().join("target");
+    cargo.arg("--target-dir").arg(target_dir);
     println!("Running command:\n {:?}", cargo);
     let status = cargo.status().unwrap();
     if !status.success() {
         println!("Build failed: {status}");
         process::exit(1);
     }
-    create_bootdev_image(release);
 }
-
 
 /// Get the Cargo metadata parsed from the standard output
 /// of the invocation of Cargo. Return `None` if the command
@@ -122,7 +122,7 @@ pub fn get_cargo_metadata<S1: AsRef<Path>, S2: AsRef<std::ffi::OsStr>>(
     Some(serde_json::from_str(&stdout).unwrap())
 }
 
-fn do_new_base_crate() {
+fn do_new_base_crate() -> PathBuf {
     let base_crate_path = std::env::current_dir()
         .unwrap()
         .join("target")
@@ -196,7 +196,7 @@ fn do_new_base_crate() {
     fs::write("src/main.rs", main_rs).unwrap();
 
     // Add dependencies to the Cargo.toml
-    add_manifest_dependency(dep_crate_name, dep_crate_path, false);
+    add_manifest_dependency(dep_crate_name, dep_crate_path);
 
     // Copy the manifest configurations from the target crate to the base crate
     copy_profile_configurations(workspace_root);
@@ -206,13 +206,10 @@ fn do_new_base_crate() {
 
     // Get back to the original directory
     std::env::set_current_dir(original_dir).unwrap();
+    base_crate_path
 }
 
-fn add_manifest_dependency(
-    crate_name: &str,
-    crate_path: impl AsRef<Path>,
-    link_unit_test_runner: bool,
-) {
+fn add_manifest_dependency(crate_name: &str, crate_path: impl AsRef<Path>) {
     let manifest_path = "Cargo.toml";
 
     let mut manifest: toml::Table = {
@@ -235,7 +232,7 @@ fn add_manifest_dependency(
         crate_name,
         crate_path.as_ref().display()
     ))
-        .unwrap();
+    .unwrap();
     dependencies.as_table_mut().unwrap().extend(target_dep);
     add_manifest_dependency_to(
         dependencies,
@@ -265,11 +262,7 @@ fn add_manifest_dependency_to(manifest: &mut toml::Value, dep_name: &str, path: 
                 dep_crate_dir.display()
             )
         }
-        _ => format!(
-            "{} = {{ version = \"{}\" }}",
-            dep_name,
-            env!("CARGO_PKG_VERSION"),
-        ),
+        _ => format!("{} = {{ version = \"{}\" }}", dep_name, OSTD_VERSION,),
     };
     let dep_val = toml::Table::from_str(&dep_str).unwrap();
     manifest.as_table_mut().unwrap().extend(dep_val);
@@ -338,12 +331,14 @@ fn create_bootdev_image(release: bool) {
         std::fs::remove_dir_all(&iso_root).unwrap();
     }
     std::fs::create_dir_all(iso_root.join("boot").join("grub")).unwrap();
-    let target_path = iso_root.join("boot").join("fmd-tdx-enclave-service-osdk-bin");
+    let target_path = iso_root
+        .join("boot")
+        .join("fmd-tdx-enclave-service-osdk-bin");
     let bin_path = std::env::current_dir()
         .unwrap()
         .join("target")
         .join("x86_64-unknown-none")
-        .join(if release {"release"} else {"debug"})
+        .join(if release { "release" } else { "debug" })
         .join("fmd-tdx-enclave-service-osdk-bin");
     println!("bin_path: {:?}", bin_path);
     println!("target_path: {:?}", target_path);
@@ -385,12 +380,15 @@ fn run(features: Option<String>, target: Option<String>, release: bool) {
     if !std::fs::exists("target").unwrap() {
         build(features, target, release);
     }
-    let config = std::fs::read_to_string("OSDK.toml").unwrap().parse::<Table>().unwrap();
+    let config = std::fs::read_to_string("OSDK.toml")
+        .unwrap()
+        .parse::<Table>()
+        .unwrap();
     let Value::String(args) = &config["qemu"]["args"] else {
         panic!("Could not parse qemu args for OSDK.toml");
     };
     let mut args = args.split(' ').collect::<Vec<_>>();
-    if Some("") ==args.last().map(|v| &**v) {
+    if Some("") == args.last().map(|v| &**v) {
         args.pop();
     }
     let mut command = Command::new("qemu-system-x86_64");
@@ -413,5 +411,44 @@ fn run(features: Option<String>, target: Option<String>, release: bool) {
     if !status.success() {
         println!("Build failed: {status}");
         process::exit(1);
+    }
+}
+
+/// A guard that ensures the current working directory is restored
+/// to its original state when the guard goes out of scope.
+pub struct DirGuard(PathBuf);
+
+impl DirGuard {
+    /// Creates a new `DirGuard` that restores the provided directory
+    /// when it goes out of scope.
+    ///
+    /// # Arguments
+    ///
+    /// * `original_dir` - The directory to restore when the guard is dropped.
+    pub fn new(original_dir: PathBuf) -> Self {
+        Self(original_dir)
+    }
+
+    /// Creates a new `DirGuard` using the current working directory as the original directory.
+    pub fn from_current_dir() -> Self {
+        Self::new(std::env::current_dir().unwrap())
+    }
+
+    /// Stores the current directory as the original directory and
+    /// changes the working directory to the specified `new_dir`.
+    ///
+    /// # Arguments
+    ///
+    /// * `new_dir` - The directory to switch to.
+    pub fn change_dir(new_dir: impl AsRef<Path>) -> Self {
+        let original_dir_guard = DirGuard::from_current_dir();
+        std::env::set_current_dir(new_dir.as_ref()).unwrap();
+        original_dir_guard
+    }
+}
+
+impl Drop for DirGuard {
+    fn drop(&mut self) {
+        std::env::set_current_dir(&self.0).unwrap();
     }
 }
