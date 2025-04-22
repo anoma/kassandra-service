@@ -124,6 +124,20 @@ fn create_bootdev_image(release: bool) {
     "#;
     let grub_cfg_path = iso_root.join("boot").join("grub").join("grub.cfg");
     fs::write(grub_cfg_path, grub_cfg).unwrap();
+    let iso_path = std::env::current_dir()
+        .unwrap()
+        .join("target")
+        .join("osdk")
+        .join("fmd-tdx-enclave-service")
+        .join("fmd-tdx-enclave-service-osdk-bin.iso");
+    let mut grub_mkrescue_cmd = std::process::Command::new("grub-mkrescue");
+    grub_mkrescue_cmd
+        .arg(iso_root.as_os_str())
+        .arg("-o")
+        .arg(iso_path);
+    if !grub_mkrescue_cmd.status().unwrap().success() {
+        panic!("Failed to run {:#?}.", grub_mkrescue_cmd);
+    }
 }
 
 pub fn hard_link_or_copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<u64> {
