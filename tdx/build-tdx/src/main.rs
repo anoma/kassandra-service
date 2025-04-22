@@ -237,30 +237,42 @@ fn add_manifest_dependency(
     ))
         .unwrap();
     dependencies.as_table_mut().unwrap().extend(target_dep);
+    add_manifest_dependency_to(
+        dependencies,
+        "osdk-frame-allocator",
+        Path::new("deps").join("frame-allocator"),
+    );
 
-    if link_unit_test_runner {
-        let dep_str = match option_env!("OSDK_LOCAL_DEV") {
-            Some("1") => {
-                let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-                let test_kernel_dir = crate_dir.join("test-kernel");
-                format!(
-                    "osdk-test-kernel = {{ path = \"{}\" }}",
-                    test_kernel_dir.display()
-                )
-            }
-            _ => concat!(
-            "osdk-test-kernel = { version = \"",
-            env!("CARGO_PKG_VERSION"),
-            "\" }"
-            )
-                .to_owned(),
-        };
-        let test_runner_dep = toml::Table::from_str(&dep_str).unwrap();
-        dependencies.as_table_mut().unwrap().extend(test_runner_dep);
-    }
+    add_manifest_dependency_to(
+        dependencies,
+        "osdk-heap-allocator",
+        Path::new("deps").join("heap-allocator"),
+    );
+
+    add_manifest_dependency_to(dependencies, "ostd", Path::new("..").join("ostd"));
 
     let content = toml::to_string(&manifest).unwrap();
     std::fs::write(manifest_path, content).unwrap();
+}
+fn add_manifest_dependency_to(manifest: &mut toml::Value, dep_name: &str, path: PathBuf) {
+    let dep_str = match option_env!("OSDK_LOCAL_DEV") {
+        Some("1") => {
+            let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            let dep_crate_dir = crate_dir.join(path);
+            format!(
+                "{} = {{ path = \"{}\" }}",
+                dep_name,
+                dep_crate_dir.display()
+            )
+        }
+        _ => format!(
+            "{} = {{ version = \"{}\" }}",
+            dep_name,
+            env!("CARGO_PKG_VERSION"),
+        ),
+    };
+    let dep_val = toml::Table::from_str(&dep_str).unwrap();
+    manifest.as_table_mut().unwrap().extend(dep_val);
 }
 
 fn copy_profile_configurations(workspace_root: impl AsRef<Path>) {
