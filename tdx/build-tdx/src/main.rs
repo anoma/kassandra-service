@@ -48,13 +48,14 @@ fn main() {
 fn build(features: Option<String>, target: Option<String>, release: bool) {
     let base_crate = do_new_base_crate();
     {
+        let target_dir = std::env::current_dir().unwrap().join("target");
         let _dir_guard = DirGuard::change_dir(&base_crate);
-        run_cargo(features, target, release);
+        run_cargo(features, target, target_dir, release);
     }
     create_bootdev_image(release);
 }
 
-fn run_cargo(features: Option<String>, target: Option<String>, release: bool) {
+fn run_cargo(features: Option<String>, target: Option<String>, target_dir: PathBuf, release: bool) {
     let mut cargo = Command::new("cargo");
     let env_rustflags = std::env::var("RUSTFLAGS").unwrap_or_default();
     let rustflags = [
@@ -83,8 +84,6 @@ fn run_cargo(features: Option<String>, target: Option<String>, release: bool) {
     if release {
         cargo.arg("--profile=release");
     }
-
-    let target_dir = std::env::current_dir().unwrap().join("target");
     cargo.arg("--target-dir").arg(target_dir);
     println!("Running command:\n {:?}", cargo);
     let status = cargo.status().unwrap();
