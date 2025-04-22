@@ -90,6 +90,15 @@ fn build(features: Option<String>, target: Option<String>, release: bool) {
     }
 }
 
+fn create_bootdev_image() {
+    let iso_root = std::env::current_dir()
+        .unwrap()
+        .join("target")
+        .join("osdk")
+        .join("iso_root");
+    std::fs::create_dir_all(iso_root.join("boot").join("grub")).unwrap();
+}
+
 fn run(features: Option<String>, target: Option<String>, release: bool) {
     if !std::fs::exists("target").unwrap() {
         build(features, target, release);
