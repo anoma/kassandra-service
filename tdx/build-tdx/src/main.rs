@@ -98,17 +98,19 @@ fn create_bootdev_image(release: bool) {
         .join("osdk")
         .join("iso_root");
     if iso_root.exists() {
-        std::fs::remove_dir_all(iso_root).unwrap();
+        std::fs::remove_dir_all(&iso_root).unwrap();
     }
     std::fs::create_dir_all(iso_root.join("boot").join("grub")).unwrap();
-    let target_path = iso_root.join("boot").join(&target_name);
+    let target_path = iso_root.join("boot").join("fmd-tdx-enclave-service-osdk-bin");
     let bin_path = std::env::current_dir()
         .unwrap()
         .join("target")
         .join("x86_64-unknown-none")
-        .join(if relase {"release"} else {"debug"})
+        .join(if release {"release"} else {"debug"})
         .join("fmd-tdx-enclave-service-osdk-bin");
-    hard_link_or_copy(bin_path, target_path).unwrap();
+    if std::fs::hard_link(&bin_path, &target_path).is_err() {
+        std::fs::copy(bin_path, target_path).unwrap();
+    }
     let grub_cfg = r#"# AUTOMATICALLY GENERATED FILE, DO NOT EDIT UNLESS YOU KNOW WHAT YOU ARE DOING
 
     # set debug=linux,efi,linuxefi
@@ -123,7 +125,7 @@ fn create_bootdev_image(release: bool) {
     }
     "#;
     let grub_cfg_path = iso_root.join("boot").join("grub").join("grub.cfg");
-    fs::write(grub_cfg_path, grub_cfg).unwrap();
+    std::fs::write(grub_cfg_path, grub_cfg).unwrap();
     let iso_path = std::env::current_dir()
         .unwrap()
         .join("target")
@@ -138,13 +140,6 @@ fn create_bootdev_image(release: bool) {
     if !grub_mkrescue_cmd.status().unwrap().success() {
         panic!("Failed to run {:#?}.", grub_mkrescue_cmd);
     }
-}
-
-pub fn hard_link_or_copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<u64> {
-    if fs::hard_link(&from, &to).is_err() {
-        return fs::copy(from, to);
-    }
-    Ok(0)
 }
 
 fn run(features: Option<String>, target: Option<String>, release: bool) {
