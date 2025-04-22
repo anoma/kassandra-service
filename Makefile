@@ -5,15 +5,19 @@ tdx-build-tool:
 	cargo build -r
 
 build-tdx: tdx-build-tool
+	cd tdx && /
 	env RUST_BACKTRACE=1 ./build-tdx/target/release/build-tdx --target $(shell readlink -f tdx/x86_64-unknown-none.json) --release build
 
 build-mock-tdx: tdx-build-tool
+	cd tdx && /
 	env RUST_BACKTRACE=1 ./build-tdx/target/release/build-tdx --target $(shell readlink -f tdx/x86_64-unknown-none.json) --release --features "mock" build
 
 run-tdx: tdx-build-tool
+	cd tdx && /
 	env RUST_BACKTRACE=1 ./build-tdx/target/release/build-tdx --target $(shell readlink -f tdx/x86_64-unknown-none.json) --release --features "mock" run
 
 run-mock-tdx: tdx-build-tool
+	cd tdx && /
 	env RUST_BACKTRACE=1 ./build-tdx/target/release/build-tdx --target $(shell readlink -f tdx/x86_64-unknown-none.json) --release --features "mock" run
 
 build:
