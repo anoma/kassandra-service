@@ -20,4 +20,4 @@ x25519-dalek = "2.0.1"
 version = "0.14.1"
 
 [workspace]
-exclude = ["target/osdk/base", "target/osdk/test-base"]
+exclude = ["target/osdk/base", "target/osdk/test-base", "osdk_tmp"]
