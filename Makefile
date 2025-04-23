@@ -4,15 +4,15 @@ tdx-build-tool:
 
 build-tdx: tdx-build-tool
 	cd tdx && \
-	env RUST_BACKTRACE=1 cargo-osdk osdk build --release --target-profile $(shell readlink -f tdx/x86_64-unknown-none.json)
+	env RUST_BACKTRACE=1 ./cargo-osdk osdk build --release --target-profile $(shell readlink -f tdx/x86_64-unknown-none.json)
 
 build-mock-tdx: tdx-build-tool
 	cd tdx && \
-	env RUST_BACKTRACE=1 cargo-osdk osdk build --release --features "mock" --target-profile $(shell readlink -f tdx/x86_64-unknown-none.json)
+	env RUST_BACKTRACE=1 ./cargo-osdk osdk build --release --features "mock" --target-profile $(shell readlink -f tdx/x86_64-unknown-none.json)
 
 run-tdx: tdx-build-tool build-tdx
 	cd tdx && \
-	env RUST_BACKTRACE=1 cargo-osdk osdk run --release
+	env RUST_BACKTRACE=1 cargo osdk run --release
 
 run-mock-tdx: tdx-build-tool build-mock-tdx
 	cp /usr/share/OVMF/OVMF_VARS.fd tdx/
