@@ -1,9 +1,17 @@
-use clap::{Parser, Subcommand, arg};
-use std::path::{Path, PathBuf};
+mod manifest;
+mod utils;
+
+use std::path::PathBuf;
 use std::process;
 use std::process::Command;
-use std::str::FromStr;
+
+use clap::{Parser, Subcommand, arg};
 use toml::{Table, Value};
+
+use crate::manifest::{
+    add_feature_entries, add_manifest_dependency, copy_profile_configurations, get_cargo_metadata,
+};
+use crate::utils::{DirGuard, hard_link_or_copy};
 
 const OSTD_VERSION: &str = "0.14.1";
 
@@ -47,11 +55,9 @@ fn main() {
 
 fn build(features: Option<String>, target: Option<String>, release: bool) {
     let base_crate = do_new_base_crate();
-    {
-        let target_dir = std::env::current_dir().unwrap().join("target");
-        let _dir_guard = DirGuard::change_dir(&base_crate);
-        run_cargo(features, target, target_dir, release);
-    }
+    let target_dir = std::env::current_dir().unwrap().join("target");
+    let _dir_guard = DirGuard::change_dir(&base_crate);
+    run_cargo(features, target, target_dir, release);
     create_bootdev_image(release);
 }
 
@@ -91,34 +97,6 @@ fn run_cargo(features: Option<String>, target: Option<String>, target_dir: PathB
         println!("Build failed: {status}");
         process::exit(1);
     }
-}
-
-/// Get the Cargo metadata parsed from the standard output
-/// of the invocation of Cargo. Return `None` if the command
-/// fails or the `current_dir` is not in a Cargo workspace.
-pub fn get_cargo_metadata<S1: AsRef<Path>, S2: AsRef<std::ffi::OsStr>>(
-    current_dir: Option<S1>,
-    cargo_args: Option<&[S2]>,
-) -> Option<serde_json::Value> {
-    let mut command = Command::new("cargo");
-    command.args(["metadata", "--no-deps", "--format-version", "1"]);
-
-    if let Some(current_dir) = current_dir {
-        command.current_dir(current_dir);
-    }
-
-    if let Some(cargo_args) = cargo_args {
-        command.args(cargo_args);
-    }
-
-    let output = command.output().unwrap();
-
-    if !output.status.success() {
-        return None;
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    Some(serde_json::from_str(&stdout).unwrap())
 }
 
 fn do_new_base_crate() -> PathBuf {
@@ -208,118 +186,6 @@ fn do_new_base_crate() -> PathBuf {
     base_crate_path
 }
 
-fn add_manifest_dependency(crate_name: &str, crate_path: impl AsRef<Path>) {
-    let manifest_path = "Cargo.toml";
-
-    let mut manifest: toml::Table = {
-        let content = std::fs::read_to_string(manifest_path).unwrap();
-        toml::from_str(&content).unwrap()
-    };
-
-    // Check if "dependencies" key exists, create it if it doesn't
-    if !manifest.contains_key("dependencies") {
-        manifest.insert(
-            "dependencies".to_string(),
-            toml::Value::Table(toml::Table::new()),
-        );
-    }
-
-    let dependencies = manifest.get_mut("dependencies").unwrap();
-
-    let target_dep = toml::Table::from_str(&format!(
-        "{} = {{ path = \"{}\", default-features = false }}",
-        crate_name,
-        crate_path.as_ref().display()
-    ))
-    .unwrap();
-    dependencies.as_table_mut().unwrap().extend(target_dep);
-    add_manifest_dependency_to(
-        dependencies,
-        "osdk-frame-allocator",
-        Path::new("deps").join("frame-allocator"),
-    );
-
-    add_manifest_dependency_to(
-        dependencies,
-        "osdk-heap-allocator",
-        Path::new("deps").join("heap-allocator"),
-    );
-
-    add_manifest_dependency_to(dependencies, "ostd", Path::new("..").join("ostd"));
-
-    let content = toml::to_string(&manifest).unwrap();
-    std::fs::write(manifest_path, content).unwrap();
-}
-fn add_manifest_dependency_to(manifest: &mut toml::Value, dep_name: &str, path: PathBuf) {
-    let dep_str = match option_env!("OSDK_LOCAL_DEV") {
-        Some("1") => {
-            let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-            let dep_crate_dir = crate_dir.join(path);
-            format!(
-                "{} = {{ path = \"{}\" }}",
-                dep_name,
-                dep_crate_dir.display()
-            )
-        }
-        _ => format!("{} = {{ version = \"{}\" }}", dep_name, OSTD_VERSION,),
-    };
-    let dep_val = toml::Table::from_str(&dep_str).unwrap();
-    manifest.as_table_mut().unwrap().extend(dep_val);
-}
-
-fn copy_profile_configurations(workspace_root: impl AsRef<Path>) {
-    let target_manifest_path = workspace_root.as_ref().join("Cargo.toml");
-    let manifest_path = "Cargo.toml";
-
-    let target_manifest: toml::Table = {
-        let content = std::fs::read_to_string(target_manifest_path).unwrap();
-        toml::from_str(&content).unwrap()
-    };
-
-    let mut manifest: toml::Table = {
-        let content = std::fs::read_to_string(manifest_path).unwrap();
-        toml::from_str(&content).unwrap()
-    };
-
-    // Copy the profile configurations
-    let profile = target_manifest.get("profile");
-    if let Some(profile) = profile {
-        manifest.insert(
-            "profile".to_string(),
-            toml::Value::Table(profile.as_table().unwrap().clone()),
-        );
-    }
-
-    let content = toml::to_string(&manifest).unwrap();
-    std::fs::write(manifest_path, content).unwrap();
-}
-
-fn add_feature_entries(dep_crate_name: &str, features: &toml::Table) {
-    let manifest_path = "Cargo.toml";
-    let mut manifest: toml::Table = {
-        let content = std::fs::read_to_string(manifest_path).unwrap();
-        toml::from_str(&content).unwrap()
-    };
-
-    let mut table = toml::Table::new();
-    for (feature, value) in features.iter() {
-        let value = if feature != &"default".to_string() {
-            vec![toml::Value::String(format!(
-                "{}/{}",
-                dep_crate_name, feature
-            ))]
-        } else {
-            value.as_array().unwrap().clone()
-        };
-        table.insert(feature.clone(), toml::Value::Array(value));
-    }
-
-    manifest.insert("features".to_string(), toml::Value::Table(table));
-
-    let content = toml::to_string(&manifest).unwrap();
-    std::fs::write(manifest_path, content).unwrap();
-}
-
 fn create_bootdev_image(release: bool) {
     let iso_root = std::env::current_dir()
         .unwrap()
@@ -341,9 +207,7 @@ fn create_bootdev_image(release: bool) {
         .join("fmd-tdx-enclave-service-osdk-bin");
     println!("bin_path: {:?}", bin_path);
     println!("target_path: {:?}", target_path);
-    if std::fs::hard_link(&bin_path, &target_path).is_err() {
-        std::fs::copy(bin_path, target_path).unwrap();
-    }
+    hard_link_or_copy(&bin_path, &target_path).unwrap();
     let grub_cfg = r#"# AUTOMATICALLY GENERATED FILE, DO NOT EDIT UNLESS YOU KNOW WHAT YOU ARE DOING
 
     # set debug=linux,efi,linuxefi
@@ -369,10 +233,12 @@ fn create_bootdev_image(release: bool) {
     grub_mkrescue_cmd
         .arg(iso_root.as_os_str())
         .arg("-o")
-        .arg(iso_path);
+        .arg(&iso_path);
     if !grub_mkrescue_cmd.status().unwrap().success() {
         panic!("Failed to run {:#?}.", grub_mkrescue_cmd);
     }
+
+    hard_link_or_copy("fmd-tdx-enclave-service-osdk-bin.iso", iso_path).unwrap();
 }
 
 fn run(features: Option<String>, target: Option<String>, release: bool) {
@@ -410,44 +276,5 @@ fn run(features: Option<String>, target: Option<String>, release: bool) {
     if !status.success() {
         println!("Build failed: {status}");
         process::exit(1);
-    }
-}
-
-/// A guard that ensures the current working directory is restored
-/// to its original state when the guard goes out of scope.
-pub struct DirGuard(PathBuf);
-
-impl DirGuard {
-    /// Creates a new `DirGuard` that restores the provided directory
-    /// when it goes out of scope.
-    ///
-    /// # Arguments
-    ///
-    /// * `original_dir` - The directory to restore when the guard is dropped.
-    pub fn new(original_dir: PathBuf) -> Self {
-        Self(original_dir)
-    }
-
-    /// Creates a new `DirGuard` using the current working directory as the original directory.
-    pub fn from_current_dir() -> Self {
-        Self::new(std::env::current_dir().unwrap())
-    }
-
-    /// Stores the current directory as the original directory and
-    /// changes the working directory to the specified `new_dir`.
-    ///
-    /// # Arguments
-    ///
-    /// * `new_dir` - The directory to switch to.
-    pub fn change_dir(new_dir: impl AsRef<Path>) -> Self {
-        let original_dir_guard = DirGuard::from_current_dir();
-        std::env::set_current_dir(new_dir.as_ref()).unwrap();
-        original_dir_guard
-    }
-}
-
-impl Drop for DirGuard {
-    fn drop(&mut self) {
-        std::env::set_current_dir(&self.0).unwrap();
     }
 }
