@@ -1,20 +1,23 @@
+tdx-build-tool:
+	chmod +x tdx/create_build_tool.sh && \
+  	tdx/create_build_tool.sh
 
-build-tdx:
+build-tdx: tdx-build-tool
 	cd tdx && \
-	env RUST_BACKTRACE=1 OSDK_TARGET=$(shell readlink -f tdx/x86_64-unknown-none.json) cargo osdk build --release
+	env RUST_BACKTRACE=1 ./cargo-osdk osdk build --release --target-profile $(shell readlink -f tdx/x86_64-unknown-none.json)
 
-build-mock-tdx:
+build-mock-tdx: tdx-build-tool
 	cd tdx && \
-	env RUST_BACKTRACE=1 OSDK_TARGET=$(shell readlink -f tdx/x86_64-unknown-none.json) cargo osdk build --release --features "mock"
+	env RUST_BACKTRACE=1 ./cargo-osdk osdk build --release --features "mock" --target-profile $(shell readlink -f tdx/x86_64-unknown-none.json)
 
-run-tdx:
+run-tdx: tdx-build-tool build-tdx
 	cd tdx && \
-	env RUST_BACKTRACE=1 OSDK_TARGET=$(shell readlink -f tdx/x86_64-unknown-none.json) cargo osdk run --release
+	env RUST_BACKTRACE=1 ./cargo-osdk osdk run --release --target-profile $(shell readlink -f tdx/x86_64-unknown-none.json)
 
-run-mock-tdx:
+run-mock-tdx: tdx-build-tool build-mock-tdx
 	cp /usr/share/OVMF/OVMF_VARS.fd tdx/
 	cd tdx && \
-	env RUST_BACKTRACE=1 OSDK_TARGET=$(shell readlink -f tdx/x86_64-unknown-none.json) cargo osdk run --release --features "mock"
+	env RUST_BACKTRACE=1 ./cargo-osdk osdk run --release --features "mock" --target-profile $(shell readlink -f tdx/x86_64-unknown-none.json)
 
 build:
 	cargo build
