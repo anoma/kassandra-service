@@ -1,14 +1,42 @@
 //! Functions for querying the Kassandra service DB for data
 //! relevant to a particular registered key.
 
+use std::path::Path;
+
 use chacha20poly1305::aead::Aead;
 use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
+use fmd::fmd2_compact::CompactSecretKey;
 use shared::db::{EncKey, IndexList};
 use shared::{ClientMsg, ServerMsg};
 
 use crate::com::OutgoingTcp;
+use crate::config::{Config, Service};
+use crate::{encryption_key, get_host_uuid};
 
-pub fn query_fmd_key(url: &str, enc_key: &EncKey) {
+/// Query all services where a key is registered and combine the results.
+pub fn query_fmd_key(base_dir: impl AsRef<Path>, csk_key: &CompactSecretKey) -> IndexList {
+    let services = match Config::get_services(base_dir, csk_key) {
+        Ok(services) => services,
+        Err(e) => {
+            tracing::error!("Error getting the associated services from the config file: {e}");
+            panic!("Error getting the associated services from the config file: {e}");
+        }
+    };
+    let mut indices = IndexList::default();
+    for Service { url, .. } in services {
+        let uuid = get_host_uuid(&url);
+        let enc_key = encryption_key(csk_key, &uuid);
+        if let Some(list) = query_service(&url, &enc_key, &uuid) {
+            indices.combine(list);
+        }
+    }
+    let result = serde_json::to_string_pretty(&indices).unwrap();
+    tracing::info!("{result}");
+    indices
+}
+
+/// Query a particular service for data on a particular registered key.
+pub fn query_service(url: &str, enc_key: &EncKey, uuid: &str) -> Option<IndexList> {
     let mut stream = OutgoingTcp::new(url);
     stream.write(ClientMsg::RequestIndices {
         key_hash: enc_key.hash(),
@@ -17,36 +45,37 @@ pub fn query_fmd_key(url: &str, enc_key: &EncKey) {
     let encrypted = match stream.read() {
         Ok(ServerMsg::IndicesResponse(resp)) => resp,
         Ok(ServerMsg::Error(err)) => {
-            tracing::error!("Error reported by server: {err}");
-            panic!("{err}")
+            tracing::error!("Service < {uuid} >: Error reported by server: {err}");
+            return None;
         }
         _ => {
-            tracing::error!("Unable to parse response from the service.");
-            panic!("Unable to parse response from the service.");
+            tracing::error!("Service < {uuid} >: Unable to parse response from the service.");
+            return None;
         }
     };
 
     if encrypted.owner != enc_key.hash() {
-        tracing::error!("Received response for data owned by a different key");
-        panic!("Received response for data owned by a different key");
+        tracing::error!("Service < {uuid} >: Received response for data owned by a different key");
+        return None;
     }
 
     let cipher = ChaCha20Poly1305::new(enc_key.into());
     let nonce = Nonce::from(encrypted.nonce);
     let Ok(index_bytes) = cipher.decrypt(&nonce, encrypted.indices.as_ref()) else {
-        tracing::error!("Failed to decrypt the response from the service");
-        panic!("Failed to decrypt the response from the service");
+        tracing::error!("Service < {uuid} >: Failed to decrypt the response from the service");
+        return None;
     };
 
     match IndexList::try_from_bytes(&index_bytes) {
         None => {
-            tracing::error!("Could not deserialize decrypted response as MASP indices");
-            panic!("Could not deserialize decrypted response as MASP indices");
+            tracing::error!(
+                "Service < {uuid} >: Could not deserialize decrypted response as MASP indices"
+            );
+            None
         }
         Some(list) => {
-            tracing::info!("Synced to height: {}", encrypted.height);
-            let indices = serde_json::to_string_pretty(&list).unwrap();
-            tracing::info!("{}", indices);
+            tracing::info!("Service < {uuid} >: Synced to height: {}", encrypted.height);
+            Some(list)
         }
     }
 }

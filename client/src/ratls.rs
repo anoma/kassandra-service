@@ -6,40 +6,59 @@
 //! clients is registering clients' FMD detection keys with the
 //! enclave.
 
+use std::path::Path;
+
 use fmd::fmd2_compact::{CompactSecretKey, MultiFmd2CompactScheme};
-use fmd::{KeyExpansion, MultiFmdScheme};
+use fmd::{DetectionKey, KeyExpansion, MultiFmdScheme};
 use rand_core::{OsRng, RngCore};
 use shared::db::EncKey;
 use shared::ratls::{Connection, FmdKeyRegistration};
 use shared::tee::EnclaveClient;
 use shared::{AckType, ClientMsg, ServerMsg};
 
-use crate::GAMMA;
 use crate::com::OutgoingTcp;
+use crate::config::{Config, Service};
+use crate::{GAMMA, encryption_key, get_host_uuid};
+
+/// Registers an fmd key to each service instance
+/// specified in the config file.
+pub fn register_fmd_key<C: EnclaveClient>(
+    base_dir: impl AsRef<Path>,
+    csk_key: CompactSecretKey,
+    birthday: Option<u64>,
+) {
+    let services = match Config::get_services(base_dir, &csk_key) {
+        Ok(services) => services,
+        Err(e) => {
+            tracing::error!("Error getting the associated services from the config file: {e}");
+            panic!("Error getting the associated services from the config file: {e}");
+        }
+    };
+    // Get the fmd key and encryption key
+    let cpk_key = csk_key.master_public_key();
+    let scheme = MultiFmd2CompactScheme::new(GAMMA, 1);
+    let (fmd_key, _) = scheme.expand_keypair(&csk_key, &cpk_key);
+    let detection_keys = scheme
+        .multi_extract(&fmd_key, services.len(), 1, 1, services.len())
+        .unwrap();
+    for Service { url, index } in services {
+        let uuid = get_host_uuid(&url);
+        let enc_key = encryption_key(&csk_key, &uuid);
+        register_fmd_key_to_service::<C>(&url, enc_key, detection_keys[index].clone(), birthday);
+    }
+}
 
 /// Initialize a new TLS connection with the enclave.
 /// The handshake phase establishes a shared key via DHKE.
 ///
 /// The client also validates the Remote Attestation report
 /// provided by the enclave.
-pub(crate) fn register_fmd_key<C: EnclaveClient>(
+pub fn register_fmd_key_to_service<C: EnclaveClient>(
     url: &str,
-    csk_key: CompactSecretKey,
     encryption_key: EncKey,
+    detection_key: DetectionKey,
     birthday: Option<u64>,
 ) {
-    // Get the fmd key and encryption key
-    let cpk_key = csk_key.master_public_key();
-    let scheme = MultiFmd2CompactScheme::new(GAMMA, 1);
-    let (fmd_key, _) = scheme.expand_keypair(&csk_key, &cpk_key);
-    // TODO: Support sending detection keys to multiple server instances
-    let detection_key = scheme
-        .multi_extract(&fmd_key, 1, 1, 1, 1)
-        .unwrap()
-        .into_iter()
-        .next()
-        .unwrap();
-
     let mut rng = OsRng;
     let mut stream = OutgoingTcp::new(url);
     let conn = Connection::new(&mut rng);

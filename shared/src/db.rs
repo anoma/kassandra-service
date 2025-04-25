@@ -73,7 +73,7 @@ impl<'de> Deserialize<'de> for EncKey {
 }
 
 /// Simplified domain type for indexing a Tx on chain
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Index {
     pub height: u64,
     pub tx: u32,
@@ -115,7 +115,7 @@ impl Index {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct IndexList(alloc::vec::Vec<Index>);
 
 impl IndexList {
@@ -133,6 +133,41 @@ impl IndexList {
             Some(Self(indices))
         }
     }
+
+    /// Given two index sets, produce a new index set
+    /// modifying self in-place.
+    ///
+    /// We assume `self` is synced ahead of `other`. The intersection of
+    /// the indices up to the common block height is kept along with all
+    /// indices of `self` with block height greater than `other`'s maximum
+    /// block height.
+    pub fn combine(&mut self, mut other: Self) {
+        if self.0.is_empty() {
+            *self = other;
+            return;
+        }
+        if other.0.is_empty() {
+            return;
+        }
+        self.0.sort();
+        other.0.sort();
+        let a_height = self.0.last().map(|ix| ix.height).unwrap_or_default();
+        let b_height = other.0.last().map(|ix| ix.height).unwrap_or_default();
+        // from here on out, we assume that `self` is synced further than `other`
+        let height = if a_height < b_height {
+            core::mem::swap(self, &mut other);
+            a_height
+        } else {
+            b_height
+        };
+        self.0.retain(|ix| {
+            if ix.height > height {
+                true
+            } else {
+                other.0.binary_search(ix).is_ok()
+            }
+        });
+    }
 }
 
 /// The response from the enclave for performing
@@ -148,4 +183,41 @@ pub struct EncryptedResponse {
     pub indices: alloc::vec::Vec<u8>,
     /// The last height FMD was performed at
     pub height: u64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloc::vec::Vec;
+
+    #[test]
+    fn test_combine_indices() {
+        let a = IndexList(Vec::from([
+            Index { height: 0, tx: 0 },
+            Index { height: 0, tx: 1 },
+            Index { height: 1, tx: 0 },
+            Index { height: 3, tx: 0 },
+        ]));
+        let mut b = IndexList(Vec::from([
+            Index { height: 0, tx: 1 },
+            Index { height: 1, tx: 4 },
+        ]));
+        let expected = IndexList(Vec::from([
+            Index { height: 0, tx: 1 },
+            Index { height: 3, tx: 0 },
+        ]));
+
+        let mut first = a.clone();
+        first.combine(b.clone());
+        assert_eq!(first, expected);
+        b.combine(a.clone());
+        assert_eq!(b, expected);
+
+        let mut new = IndexList::default();
+        new.combine(a.clone());
+        assert_eq!(new, a);
+        let mut third = a.clone();
+        third.combine(IndexList::default());
+        assert_eq!(third, a);
+    }
 }

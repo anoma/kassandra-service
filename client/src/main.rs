@@ -7,12 +7,14 @@ use shared::{ClientMsg, ServerMsg};
 use tracing_subscriber::fmt::SubscriberBuilder;
 
 use crate::com::OutgoingTcp;
+use crate::config::Config;
 use crate::query::query_fmd_key;
 use crate::ratls::register_fmd_key;
 
 mod ratls;
 
 mod com;
+mod config;
 mod query;
 #[cfg(feature = "tdx")]
 mod tdx;
@@ -25,19 +27,18 @@ const GAMMA: usize = 12;
 #[command(version, about, long_about=None)]
 struct Cli {
     #[arg(
-        short,
         long,
-        value_name = "URL",
-        help = "URL of Kassandra service provider"
+        value_name = "PATH",
+        help = "Path the directory storing client related files"
     )]
-    url: String,
+    base_dir: String,
     #[command(subcommand)]
     command: Commands,
 }
 
 #[derive(Subcommand)]
 enum Commands {
-    #[command(about = "Register a fuzzy message detection key with a Kassandra service")]
+    #[command(about = "Register a fuzzy message detection key with configured Kassandra services")]
     RegisterKey {
         #[arg(short, long, help = "JSON encoded FMD secret key")]
         key: String,
@@ -47,6 +48,20 @@ enum Commands {
             value_name = "Integer"
         )]
         birthday: Option<u64>,
+    },
+    #[command(
+        about = "Add a Kassandra service instance which a fuzzy message detection key will be registered to."
+    )]
+    AddService {
+        #[arg(short, long, help = "JSON encoded FMD secret key")]
+        key: String,
+        #[arg(
+            short,
+            long,
+            value_name = "URL",
+            help = "URL of Kassandra service provider"
+        )]
+        url: String,
     },
     #[command(
         about = "Request the indices of MASP transactions that should be trial-decrypted by the provided key"
@@ -60,26 +75,23 @@ enum Commands {
 fn main() {
     init_logging();
     let cli = Cli::parse();
-    let uuid = get_host_uuid(&cli.url);
-    tracing::info!("Connected to host with uuid: {uuid}");
     match &cli.command {
+        Commands::AddService { key, url } => {
+            tracing::info!("Adding service to the config file...");
+            let csk_key = serde_json::from_str(key).unwrap();
+            Config::add_service(&cli.base_dir, csk_key, url).unwrap();
+        }
         Commands::RegisterKey { key, birthday } => {
             tracing::info!("Registering FMD key...");
             let csk_key = serde_json::from_str(key).unwrap();
-            let enc_key = encryption_key(&csk_key, &uuid);
             #[cfg(feature = "tdx")]
-            register_fmd_key::<tdx::TdxClient>(&cli.url, csk_key, enc_key, *birthday);
+            register_fmd_key::<tdx::TdxClient>(&cli.base_dir, csk_key, *birthday);
             #[cfg(feature = "transparent")]
-            register_fmd_key::<transparent::TClient>(&cli.url, csk_key, enc_key, *birthday);
+            register_fmd_key::<transparent::TClient>(&cli.base_dir, csk_key, *birthday);
         }
         Commands::QueryIndices { key } => {
             let csk_key = serde_json::from_str(key).unwrap();
-            let enc_key = encryption_key(&csk_key, &uuid);
-            tracing::info!(
-                "Querying MASP indices for key hash {:?} ...",
-                enc_key.hash()
-            );
-            query_fmd_key(&cli.url, &enc_key);
+            query_fmd_key(&cli.base_dir, &csk_key);
         }
     }
 }
