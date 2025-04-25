@@ -1,9 +1,9 @@
 #![no_std]
 extern crate alloc;
 
+use ::fmd::fmd2_compact::MultiFmd2CompactScheme;
 use alloc::string::ToString;
 use alloc::vec::Vec;
-use ::fmd::fmd2_compact::MultiFmd2CompactScheme;
 use shared::tee::{EnclaveComm, EnclaveRNG, RemoteAttestation};
 use shared::{MsgFromHost, MsgToHost};
 
