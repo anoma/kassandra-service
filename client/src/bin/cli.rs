@@ -1,27 +1,12 @@
-use chacha20poly1305::Key;
 use clap::{Parser, Subcommand};
-use fmd::fmd2_compact::CompactSecretKey;
-use hkdf::Hkdf;
-use shared::db::EncKey;
-use shared::{ClientMsg, ServerMsg};
-use tracing_subscriber::fmt::SubscriberBuilder;
-
-use crate::com::OutgoingTcp;
-use crate::config::Config;
-use crate::query::query_fmd_key;
-use crate::ratls::register_fmd_key;
-
-mod ratls;
-
-mod com;
-mod config;
-mod query;
+use kassandra_client::config::Config;
+use kassandra_client::init_logging;
+use kassandra_client::query::query_fmd_key;
+use kassandra_client::ratls::register_fmd_key;
 #[cfg(feature = "tdx")]
-mod tdx;
+use kassandra_client::tdx;
 #[cfg(feature = "transparent")]
-mod transparent;
-
-const GAMMA: usize = 12;
+use kassandra_client::transparent;
 
 #[derive(Parser)]
 #[command(version, about, long_about=None)]
@@ -94,30 +79,4 @@ fn main() {
             query_fmd_key(&cli.base_dir, &csk_key);
         }
     }
-}
-
-fn init_logging() {
-    SubscriberBuilder::default().with_ansi(true).init();
-}
-
-fn get_host_uuid(url: &str) -> String {
-    let mut stream = OutgoingTcp::new(url);
-    stream.write(ClientMsg::RequestUUID);
-    match stream.read() {
-        Ok(ServerMsg::UUID(uuid)) => uuid,
-        Ok(ServerMsg::Error(err)) => panic!("{err}"),
-        _ => panic!("Requesting UUID from host failed. Could not parse response."),
-    }
-}
-
-fn encryption_key(csk_key: &CompactSecretKey, salt: &str) -> EncKey {
-    let hk = Hkdf::<sha2::Sha256>::new(
-        Some(salt.as_bytes()),
-        serde_json::to_string(csk_key).unwrap().as_bytes(),
-    );
-    let mut encryption_key = [0u8; 32];
-    hk.expand("Database encryption key".as_bytes(), &mut encryption_key)
-        .unwrap();
-    let enc_key: Key = encryption_key.into();
-    enc_key.into()
 }

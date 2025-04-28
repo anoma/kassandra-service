@@ -4,6 +4,14 @@ description = "Interact with an FMD service"
 version = "0.0.1"
 edition = "2024"
 
+[lib]
+name = "kassandra_client"
+path = "src/lib.rs"
+
+[[bin]]
+name = "kassandra_cli"
+path = "src/bin/cli.rs"
+
 [features]
 default = ["transparent"]
 tdx-full = ["tdx", "tdx-quote/pck"]
