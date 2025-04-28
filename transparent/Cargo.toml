@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+clap = { version = "4.5.32", features = ["derive"] }
 enclave = {package = "fmd-enclave-service", path = "../enclave" }
 rand_core.workspace = true
 shared = { path = "../shared", features = ["std"] }

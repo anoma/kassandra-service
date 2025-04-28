@@ -1,12 +1,28 @@
 //! An implementation of the FMD detection portion of the Kassandra service that
 //! does not run in a TEE.
 
+use clap::Parser;
 use rand_core::{CryptoRng, Error, OsRng, RngCore};
-use shared::tcp::Tcp;
+use shared::tcp::{DEFAULT_ENCLAVE_ADDRESS, ENCLAVE_ADDRESS, Tcp};
 use shared::tee::{EnclaveRNG, RemoteAttestation};
+#[derive(Parser, Clone)]
+#[command(version, about, long_about=None)]
+struct Cli {
+    #[arg(
+        long,
+        value_name = "URL",
+        help = "Address for the companion Kassandra host process. Defaults to [ 0.0.0.0:12345 ]."
+    )]
+    host: Option<String>,
+}
 
 fn main() {
+    let cli = Cli::parse();
+    ENCLAVE_ADDRESS
+        .set(cli.host.unwrap_or(DEFAULT_ENCLAVE_ADDRESS.to_string()))
+        .unwrap();
     init_logging();
+    tracing::info!("Using address: {}", ENCLAVE_ADDRESS.get().unwrap());
     tracing::info!("FMD service initialized, running transparently.");
     enclave::main::<Transparent, Tcp, TRng>();
 }

@@ -7,7 +7,7 @@ use std::time::Duration;
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::Cli;
+use crate::{BASE_DIR, Cli};
 
 const CLIENT_TIMEOUT: u64 = 1;
 const CONFIG_FILE: &str = "config.toml";
@@ -111,7 +111,10 @@ impl Config {
 }
 
 pub fn kassandra_dir() -> PathBuf {
-    home::home_dir().unwrap().join(KASSANDRA_DIR)
+    BASE_DIR
+        .get()
+        .cloned()
+        .unwrap_or_else(|| home::home_dir().unwrap().join(KASSANDRA_DIR))
 }
 
 fn serialize_url<S>(url: &reqwest::Url, s: S) -> Result<S::Ok, S::Error>

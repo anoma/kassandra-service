@@ -44,7 +44,12 @@ pub fn register_fmd_key<C: EnclaveClient>(
     for Service { url, index } in services {
         let uuid = get_host_uuid(&url);
         let enc_key = encryption_key(&csk_key, &uuid);
-        register_fmd_key_to_service::<C>(&url, enc_key, detection_keys[index].clone(), birthday);
+        register_fmd_key_to_service::<C>(
+            &url,
+            enc_key,
+            detection_keys[index - 1].clone(),
+            birthday,
+        );
     }
 }
 

@@ -3,13 +3,17 @@
 use std::io::ErrorKind;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
-use std::prelude::rust_2024::Vec;
+use std::prelude::rust_2024::{String, Vec};
 use std::{io, vec};
 
 use crate::ReadWriteByte;
 use crate::tee::EnclaveComm;
+use once_cell::sync::OnceCell;
 
-const ENCLAVE_ADDRESS: &str = "0.0.0.0:12345";
+pub const DEFAULT_ENCLAVE_ADDRESS: &str = "0.0.0.0:12345";
+
+/// The TCP address for the host-enclave channel
+pub static ENCLAVE_ADDRESS: OnceCell<String> = OnceCell::new();
 
 /// A TCP stream connected with the host
 /// **NOT THREAD SAFE**
@@ -75,6 +79,6 @@ impl ReadWriteByte for Tcp {
 
 impl EnclaveComm for Tcp {
     fn init() -> Self {
-        Self::connect(ENCLAVE_ADDRESS).unwrap()
+        Self::connect(ENCLAVE_ADDRESS.get().unwrap()).unwrap()
     }
 }
