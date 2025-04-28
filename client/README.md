@@ -1,8 +1,8 @@
 # Client
 
-This binary is for user's to interact with third party server's running the Kassandra service. There are two main
+This binary is for users to interact with third party server's running the Kassandra service. There are two main
 functions that this client provides to users:
- - Registering a detection key with a service provider
+ - Registering a detection key with service provider(s)
  - Querying an encrypted data blob which contains a set of MASP indices which they should download and trial-decrypt
 
 The client can be build to expect a service running a transparent enclave or one running on TDX. This is configured
@@ -16,13 +16,13 @@ communicate further with this server. In transparent mode, these checks are skip
 Performing FMD is not faster than downloading all MASP transactions and trial-decrypting with a user's secret key. The
 benefit of FMD is that it can run as a background service on a third-party server so that user data is ready when requested.
 
-As such, users need to provide a detection key to the service that the FMD process can use to mark MASP transaction as 
+As such, users need to provide a detection key to the services that the FMD process can use to mark MASP transaction as 
 relevant to the user or not. This detection key is considered sensitive, but not security critical. The client
-will create a TLS connection with the enclave process and use the resulting secure connection to provide the detection 
-key to the enclave.
+will create a TLS connection with each chosen enclave process and use the resulting secure connection to provide a
+unique detection key to the enclave.
 
 Users will give the client their "master secret key" which the client will use to derive an appropriate detection key
-to send to a service provider. This extraction depends on a few parameters.
+to send to each service provider. This extraction depends on a few parameters. 
 
 The first parameter to consider is the false positive rate a detection key will have. A higher false-positive rate 
 increases the anonymity set of transactions but increases the client side workload of computing balances. There is also
@@ -35,7 +35,8 @@ false-positive rates to any service provider. If service providers are non-collu
 guarantees for users. 
 
 Thus users also need to configure which different service providers they will use and the client will handle the 
-apportioning of detection keys to them.
+apportioning of detection keys to them. Thus, before registration happens, the user  populates a config file for the 
+client containing information about the chosen service providers.
 
 Users may also provide a birthday for their detection key. This is a block height before which they know that there are no
 MASP transactions relevant to them. This birthday will stop the service provider from running FMD on MASP transactions
@@ -60,4 +61,4 @@ The client also allows users to query the results of FMD performed with their de
 hash of the encryption key that was used to encrypt the results in the host's database. This will be used by the host
 to find the encrypted result, which it will return to the client. The client can then decrypt the result. This will
 be a set of indices of MASP transactions along with a block height indicating the latest block height FMD was performed
-with their detection keys.
+with their detection keys. If multiple services providers are used, the index sets are combined first.

@@ -30,8 +30,6 @@ pub fn query_fmd_key(base_dir: impl AsRef<Path>, csk_key: &CompactSecretKey) -> 
             indices.combine(list);
         }
     }
-    let result = serde_json::to_string_pretty(&indices).unwrap();
-    tracing::info!("{result}");
     indices
 }
 

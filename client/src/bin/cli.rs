@@ -76,7 +76,9 @@ fn main() {
         }
         Commands::QueryIndices { key } => {
             let csk_key = serde_json::from_str(key).unwrap();
-            query_fmd_key(&cli.base_dir, &csk_key);
+            let indices = query_fmd_key(&cli.base_dir, &csk_key);
+            let result = serde_json::to_string_pretty(&indices).unwrap();
+            tracing::info!("{result}");
         }
     }
 }
