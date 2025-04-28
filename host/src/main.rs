@@ -8,6 +8,7 @@ use clap::Parser;
 use eyre::WrapErr;
 use once_cell::sync::OnceCell;
 use shared::{AckType, ClientMsg, MsgFromHost, MsgToHost, ServerMsg};
+use std::path::PathBuf;
 use tokio::net::TcpListener;
 use tracing::{error, info};
 use uuid::Uuid;
@@ -19,6 +20,10 @@ use crate::scheduler::{EventScheduler, NextEvent};
 
 /// The UUID for this host instances
 static HOST_UUID: OnceCell<Uuid> = OnceCell::new();
+
+/// Location of the base directory
+static BASE_DIR: OnceCell<PathBuf> = OnceCell::new();
+
 /// Optionally log errors for the fetch job
 static LOG_FETCH_ERRORS: OnceCell<bool> = OnceCell::new();
 const FETCH_ERRORS_ENV: &str = "LOG_FETCH_ERRORS";
@@ -26,6 +31,13 @@ const FETCH_ERRORS_ENV: &str = "LOG_FETCH_ERRORS";
 #[derive(Parser, Clone)]
 #[command(version, about, long_about=None)]
 struct Cli {
+    #[arg(
+        short,
+        long,
+        value_name = "PATH",
+        help = "Path to directory to store host files. Defaults to ~/.kassandra."
+    )]
+    base_dir: Option<String>,
     #[arg(short, long, value_name = "URL", help = "URL to talk the enclave")]
     enclave: Option<String>,
     #[arg(
@@ -54,7 +66,10 @@ struct Cli {
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
     init_logging();
-    let cli = Cli::parse();
+    let mut cli = Cli::parse();
+    if let Some(base_dir) = cli.base_dir.take() {
+        BASE_DIR.set(PathBuf::from(base_dir)).unwrap();
+    }
     let config = Config::load_or_init(cli);
 
     // open the DB and spawn the fetch job in the background

@@ -11,11 +11,14 @@ use fmd::fmd2_compact::CompactSecretKey;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
+/// The name of the config file
+pub const CLIENT_FILE_NAME: &str = "kassandra-client.toml";
+
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Config {
     /// A map from the hash of secret key to the services
     /// it is registered with
-    pub services: BTreeMap<[u8; 32], Vec<Service>>,
+    pub services: BTreeMap<String, Vec<Service>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,13 +41,24 @@ impl Config {
         })
     }
 
+    /// Load a config if it exists, otherwise create a new one
+    pub fn load_or_new(path: impl AsRef<Path>) -> std::io::Result<Self> {
+        let path = path.as_ref().join(CLIENT_FILE_NAME);
+        if path.exists() {
+            Self::load(path)
+        } else {
+            Ok(Self::default())
+        }
+    }
+
     /// Save the config at the specified path
     pub fn save(mut self, path: impl AsRef<Path>) -> std::io::Result<()> {
         for (_, services) in self.services.iter_mut() {
             services.sort_by_key(|s| s.index);
             services.dedup_by_key(|s| s.index);
         }
-        std::fs::write(path, toml::to_string(&self).unwrap())
+        let dest = path.as_ref().join(CLIENT_FILE_NAME);
+        std::fs::write(dest, toml::to_string(&self).unwrap())
     }
 
     /// Add a new service which a specified key will be registered to.
@@ -53,12 +67,7 @@ impl Config {
         key: CompactSecretKey,
         url: &str,
     ) -> std::io::Result<()> {
-        let path = path.as_ref();
-        let mut config = if path.exists() {
-            Self::load(path)?
-        } else {
-            Self::default()
-        };
+        let mut config = Self::load_or_new(path.as_ref())?;
         let key = hash_key(&key);
         match config.services.entry(key) {
             Entry::Vacant(e) => {
@@ -83,19 +92,15 @@ impl Config {
         path: impl AsRef<Path>,
         key: &CompactSecretKey,
     ) -> std::io::Result<Vec<Service>> {
-        let path = path.as_ref();
-        let config = if path.exists() {
-            Self::load(path)?
-        } else {
-            Self::default()
-        };
+        let config = Self::load_or_new(path)?;
         let key = hash_key(key);
         Ok(config.services.get(&key).cloned().unwrap_or_default())
     }
 }
 
-fn hash_key(key: &CompactSecretKey) -> [u8; 32] {
+fn hash_key(key: &CompactSecretKey) -> String {
     let mut hasher = sha2::Sha256::new();
     hasher.update(serde_json::to_string(key).unwrap().as_bytes());
-    hasher.finalize().into()
+    let bytes: [u8; 32] = hasher.finalize().into();
+    hex::encode(bytes)
 }
