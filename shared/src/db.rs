@@ -164,9 +164,37 @@ impl IndexList {
             if ix.height > height {
                 true
             } else {
-                other.0.binary_search(ix).is_ok()
+                other.contains(ix)
             }
         });
+    }
+
+    /// Create a union of two index sets
+    pub fn union(&mut self, other: &Self) {
+        self.0.extend_from_slice(&other.0[..]);
+        self.0.sort();
+        self.0.dedup();
+    }
+
+    /// Check if an index is contained in `self`
+    /// Assumes `self` is sorted.
+    pub fn contains(&self, index: &Index) -> bool {
+        self.0.binary_search(index).is_ok()
+    }
+
+    /// Return and iterator of references to the
+    /// contained indices
+    pub fn iter(&self) -> alloc::slice::Iter<Index> {
+        self.0.iter()
+    }
+}
+
+impl IntoIterator for IndexList {
+    type Item = Index;
+    type IntoIter = alloc::vec::IntoIter<Index>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
