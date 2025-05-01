@@ -1,8 +1,8 @@
 //! Shared types to be stored in the host databases
 
-use core::fmt::Formatter;
-
+use borsh::{BorshDeserialize, BorshSerialize};
 use chacha20poly1305::Key;
+use core::fmt::Formatter;
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -73,7 +73,19 @@ impl<'de> Deserialize<'de> for EncKey {
 }
 
 /// Simplified domain type for indexing a Tx on chain
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct Index {
     pub height: u64,
     pub tx: u32,
@@ -115,7 +127,17 @@ impl Index {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Default,
+    Serialize,
+    Deserialize,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct IndexList(alloc::vec::Vec<Index>);
 
 impl IndexList {
