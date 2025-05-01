@@ -187,6 +187,14 @@ impl IndexList {
     pub fn iter(&self) -> alloc::slice::Iter<Index> {
         self.0.iter()
     }
+
+    /// Function for filtering out elements in-place
+    pub fn retain<P>(&mut self, pred: P)
+    where
+        P: FnMut(&Index) -> bool,
+    {
+        self.0.retain(pred);
+    }
 }
 
 impl IntoIterator for IndexList {
@@ -195,6 +203,12 @@ impl IntoIterator for IndexList {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
+    }
+}
+
+impl FromIterator<Index> for IndexList {
+    fn from_iter<T: IntoIterator<Item = Index>>(iter: T) -> Self {
+        Self(iter.into_iter().collect())
     }
 }
 
