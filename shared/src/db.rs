@@ -128,15 +128,7 @@ impl Index {
 }
 
 #[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    Default,
-    Serialize,
-    Deserialize,
-    BorshSerialize,
-    BorshDeserialize,
+    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, BorshSerialize, BorshDeserialize,
 )]
 pub struct IndexList(alloc::vec::Vec<Index>);
 
@@ -202,6 +194,12 @@ impl IndexList {
     /// Assumes `self` is sorted.
     pub fn contains(&self, index: &Index) -> bool {
         self.0.binary_search(index).is_ok()
+    }
+
+    /// Check if the index set contains a given height.
+    /// Assumes `self` is sorted.
+    pub fn contains_height(&self, height: u64) -> bool {
+        self.0.binary_search_by_key(&height, |ix| ix.height).is_ok()
     }
 
     /// Return and iterator of references to the
