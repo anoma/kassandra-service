@@ -3,6 +3,7 @@ name = "kassandra-client"
 description = "Interact with an FMD service"
 version = "0.0.1-alpha"
 edition = "2024"
+license = "GPL-3.0"
 
 [lib]
 name = "kassandra_client"
