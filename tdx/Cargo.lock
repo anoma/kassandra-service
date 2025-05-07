@@ -467,8 +467,8 @@ name = "fmd-enclave-service"
 version = "0.0.1-alpha"
 dependencies = [
  "chacha20poly1305",
+ "kassandra-shared",
  "polyfuzzy",
- "shared",
  "x25519-dalek",
 ]
 
@@ -479,9 +479,9 @@ dependencies = [
  "drbg",
  "fmd-enclave-service",
  "getrandom",
+ "kassandra-shared",
  "ostd",
  "rand_core",
- "shared",
  "tdx-quote",
  "x25519-dalek",
 ]
@@ -664,6 +664,25 @@ dependencies = [
  "ecdsa",
  "elliptic-curve",
  "sha2",
+]
+
+[[package]]
+name = "kassandra-shared"
+version = "0.0.1-alpha"
+dependencies = [
+ "borsh",
+ "chacha20poly1305",
+ "cobs",
+ "hex",
+ "once_cell",
+ "polyfuzzy",
+ "rand_core",
+ "serde",
+ "serde_cbor",
+ "sha2",
+ "tdx-quote",
+ "thiserror",
+ "x25519-dalek",
 ]
 
 [[package]]
@@ -1267,25 +1286,6 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "digest",
-]
-
-[[package]]
-name = "shared"
-version = "0.0.1-alpha"
-dependencies = [
- "borsh",
- "chacha20poly1305",
- "cobs",
- "hex",
- "once_cell",
- "polyfuzzy",
- "rand_core",
- "serde",
- "serde_cbor",
- "sha2",
- "tdx-quote",
- "thiserror",
- "x25519-dalek",
 ]
 
 [[package]]

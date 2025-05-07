@@ -7,7 +7,7 @@ edition = "2024"
 clap = { version = "4.5.32", features = ["derive"] }
 enclave = {package = "fmd-enclave-service", path = "../enclave" }
 rand_core.workspace = true
-shared = { path = "../shared", features = ["std"] }
+shared = { package = "kassandra-shared", path = "../shared", features = ["std"] }
 tracing.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true

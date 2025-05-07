@@ -30,7 +30,7 @@ rand_core = {workspace = true, features = ["getrandom"] }
 serde_cbor.workspace = true
 serde_json = { version = "1.0.140", default-features = false, features = ["alloc"] }
 sha2.workspace = true
-shared = { path = "../shared", features = ["std"] }
+shared = { package = "kassandra-shared", path = "../shared", features = ["std"] }
 tdx-quote = { version = "0.0.3", default-features = false, optional = true }
 thiserror.workspace = true
 toml.workspace = true

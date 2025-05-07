@@ -1,5 +1,5 @@
 [package]
-name = "shared"
+name = "kassandra-shared"
 description = "Logic and types shared between multiple components of the service"
 version = "0.0.1-alpha"
 edition = "2024"

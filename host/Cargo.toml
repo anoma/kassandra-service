@@ -20,7 +20,7 @@ rusqlite = { version = "0.34.0", features = ["bundled"] }
 serde = { workspace = true, features = ["std"] }
 serde_cbor = { workspace = true, features = ["std"] }
 serde_json.workspace = true
-shared = { path = "../shared", features = ["std"] }
+shared = { package = "kassandra-shared", path = "../shared", features = ["std"] }
 tokio = { version = "1.44.1", features = ["full"] }
 tokio-scoped = "0.2.0"
 toml.workspace = true

@@ -12,7 +12,7 @@ drbg = {version = "1.0.1", default-features = false}
 enclave = {package = "fmd-enclave-service", path = "../enclave" }
 getrandom = {version ="0.2.15", default-features = false, features = ["custom"]}
 rand_core = { version = "0.6", default-features = false }
-shared = { path = "../shared" }
+shared = { package = "kassandra-shared", path = "../shared" }
 tdx-quote = "0.0.3"
 x25519-dalek = "2.0.1"
 
