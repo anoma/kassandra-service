@@ -1,7 +1,7 @@
 [package]
 name = "fmd-enclave-service"
 description = "The logic to be run by the enclave. Does not include enclave specific implementation details."
-version = "0.0.1"
+version = "0.0.1-alpha"
 edition = "2024"
 
 [dependencies]

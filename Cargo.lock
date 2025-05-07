@@ -848,7 +848,7 @@ checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
 name = "client"
-version = "0.0.1"
+version = "0.0.1-alpha"
 dependencies = [
  "chacha20poly1305",
  "clap",
@@ -2063,7 +2063,7 @@ dependencies = [
 
 [[package]]
 name = "fmd-enclave-service"
-version = "0.0.1"
+version = "0.0.1-alpha"
 dependencies = [
  "chacha20poly1305",
  "polyfuzzy",
@@ -2522,7 +2522,7 @@ dependencies = [
 
 [[package]]
 name = "host"
-version = "0.0.1"
+version = "0.0.1-alpha"
 dependencies = [
  "borsh",
  "clap",
@@ -6443,7 +6443,7 @@ dependencies = [
 
 [[package]]
 name = "shared"
-version = "0.0.1"
+version = "0.0.1-alpha"
 dependencies = [
  "borsh",
  "chacha20poly1305",
@@ -7352,7 +7352,7 @@ dependencies = [
 
 [[package]]
 name = "transparent"
-version = "0.1.0"
+version = "0.0.1-alph"
 dependencies = [
  "clap",
  "fmd-enclave-service",

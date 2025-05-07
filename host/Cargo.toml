@@ -1,7 +1,7 @@
 [package]
 name = "host"
 description = "The code that will run on the host environment hosting the enclave"
-version = "0.0.1"
+version = "0.0.1-alpha"
 edition = "2024"
 
 [dependencies]
