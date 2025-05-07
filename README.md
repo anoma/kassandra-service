@@ -7,8 +7,8 @@ extra security for users.
 
 ## Background
 
-User'ss [MASP](https://github.com/anoma/masp) transactions are stored as encrypted notes on the [Namada](https://github.com/anoma/namada) blockchain. The knowledge of which of theses notes
-belong to which user is considered private data. For users to determine which notes belong to them, the naive approach
+User's [MASP](https://github.com/anoma/masp) transactions are stored as encrypted notes on the [Namada](https://github.com/anoma/namada) blockchain. 
+The knowledge of which of these notes belong to which user is considered private data. For users to determine which notes belong to them, the naive approach
 is to download all encrypted notes and then see which of these they can decrypt with their secret keys.
 
 This solution does not scale well and requires both large amounts of network bandwidth and compute time. This is not 
