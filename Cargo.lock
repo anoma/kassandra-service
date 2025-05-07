@@ -847,31 +847,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
-name = "client"
-version = "0.0.1-alpha"
-dependencies = [
- "chacha20poly1305",
- "clap",
- "curve25519-dalek",
- "hex",
- "hkdf",
- "kassandra-shared",
- "polyfuzzy",
- "rand_core",
- "serde",
- "serde_cbor",
- "serde_json",
- "sha2 0.10.8",
- "tdx-quote",
- "thiserror 2.0.12",
- "toml",
- "tracing",
- "tracing-log",
- "tracing-subscriber",
- "x25519-dalek",
-]
-
-[[package]]
 name = "clru"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2066,7 +2041,7 @@ name = "fmd-enclave-service"
 version = "0.0.1-alpha"
 dependencies = [
  "chacha20poly1305",
- "kassandra-shared",
+ "kassandra-shared 0.0.1-alpha",
  "polyfuzzy",
  "x25519-dalek",
 ]
@@ -2530,7 +2505,7 @@ dependencies = [
  "flume",
  "futures",
  "home",
- "kassandra-shared",
+ "kassandra-shared 0.0.1-alpha",
  "namada_sdk",
  "once_cell",
  "polyfuzzy",
@@ -3717,8 +3692,54 @@ dependencies = [
 ]
 
 [[package]]
+name = "kassandra-client"
+version = "0.0.1-alpha"
+dependencies = [
+ "chacha20poly1305",
+ "clap",
+ "curve25519-dalek",
+ "hex",
+ "hkdf",
+ "kassandra-shared 0.0.1-alpha (registry+https://github.com/rust-lang/crates.io-index)",
+ "polyfuzzy",
+ "rand_core",
+ "serde",
+ "serde_cbor",
+ "serde_json",
+ "sha2 0.10.8",
+ "tdx-quote",
+ "thiserror 2.0.12",
+ "toml",
+ "tracing",
+ "tracing-log",
+ "tracing-subscriber",
+ "x25519-dalek",
+]
+
+[[package]]
 name = "kassandra-shared"
 version = "0.0.1-alpha"
+dependencies = [
+ "borsh",
+ "chacha20poly1305",
+ "cobs 0.3.0",
+ "hex",
+ "once_cell",
+ "polyfuzzy",
+ "rand_core",
+ "serde",
+ "serde_cbor",
+ "sha2 0.10.8",
+ "tdx-quote",
+ "thiserror 2.0.12",
+ "x25519-dalek",
+]
+
+[[package]]
+name = "kassandra-shared"
+version = "0.0.1-alpha"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f51d8274a5c291ad7f4680ff3cae39ee420d2ddc438ad1b59eb1f8abdb83f70"
 dependencies = [
  "borsh",
  "chacha20poly1305",
@@ -7384,7 +7405,7 @@ version = "0.0.1-alpha"
 dependencies = [
  "clap",
  "fmd-enclave-service",
- "kassandra-shared",
+ "kassandra-shared 0.0.1-alpha",
  "rand_core",
  "tracing",
  "tracing-log",
