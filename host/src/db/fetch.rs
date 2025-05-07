@@ -94,7 +94,7 @@ impl DbConn {
                 // TODO: Add fmd flag
                 stmt.execute((
                     idx.serialize_to_vec(),
-                    idx.block_height.0,
+                    idx.indexed_tx.block_height.0,
                     tx.serialize_to_vec(),
                     "",
                 ))
@@ -118,7 +118,7 @@ impl Drop for DbConn {
             _ = stmt
                 .execute((
                     idx.serialize_to_vec(),
-                    idx.block_height.0,
+                    idx.indexed_tx.block_height.0,
                     tx.serialize_to_vec(),
                     "",
                 ))
