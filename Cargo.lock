@@ -3693,14 +3693,14 @@ dependencies = [
 
 [[package]]
 name = "kassandra-client"
-version = "0.0.1-alpha"
+version = "0.0.2-alpha"
 dependencies = [
  "chacha20poly1305",
  "clap",
  "curve25519-dalek",
  "hex",
  "hkdf",
- "kassandra-shared 0.0.1-alpha",
+ "kassandra-shared 0.0.2-alpha (registry+https://github.com/rust-lang/crates.io-index)",
  "polyfuzzy",
  "rand_core",
  "serde",
@@ -3718,9 +3718,7 @@ dependencies = [
 
 [[package]]
 name = "kassandra-shared"
-version = "0.0.1-alpha"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f51d8274a5c291ad7f4680ff3cae39ee420d2ddc438ad1b59eb1f8abdb83f70"
+version = "0.0.2-alpha"
 dependencies = [
  "borsh",
  "chacha20poly1305",
@@ -3740,6 +3738,8 @@ dependencies = [
 [[package]]
 name = "kassandra-shared"
 version = "0.0.2-alpha"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "248852e4390561ee568ec214be663837e2d254576ec6b210f5799c24450203b1"
 dependencies = [
  "borsh",
  "chacha20poly1305",
