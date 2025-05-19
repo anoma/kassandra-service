@@ -2041,7 +2041,7 @@ name = "fmd-enclave-service"
 version = "0.0.1-alpha"
 dependencies = [
  "chacha20poly1305",
- "kassandra-shared 0.0.1-alpha",
+ "kassandra-shared 0.0.2-alpha",
  "polyfuzzy",
  "x25519-dalek",
 ]
@@ -2505,7 +2505,7 @@ dependencies = [
  "flume",
  "futures",
  "home",
- "kassandra-shared 0.0.1-alpha",
+ "kassandra-shared 0.0.2-alpha",
  "namada_sdk",
  "once_cell",
  "polyfuzzy",
@@ -3700,7 +3700,7 @@ dependencies = [
  "curve25519-dalek",
  "hex",
  "hkdf",
- "kassandra-shared 0.0.1-alpha (registry+https://github.com/rust-lang/crates.io-index)",
+ "kassandra-shared 0.0.1-alpha",
  "polyfuzzy",
  "rand_core",
  "serde",
@@ -3719,6 +3719,8 @@ dependencies = [
 [[package]]
 name = "kassandra-shared"
 version = "0.0.1-alpha"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f51d8274a5c291ad7f4680ff3cae39ee420d2ddc438ad1b59eb1f8abdb83f70"
 dependencies = [
  "borsh",
  "chacha20poly1305",
@@ -3737,9 +3739,7 @@ dependencies = [
 
 [[package]]
 name = "kassandra-shared"
-version = "0.0.1-alpha"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f51d8274a5c291ad7f4680ff3cae39ee420d2ddc438ad1b59eb1f8abdb83f70"
+version = "0.0.2-alpha"
 dependencies = [
  "borsh",
  "chacha20poly1305",
@@ -7405,7 +7405,7 @@ version = "0.0.1-alpha"
 dependencies = [
  "clap",
  "fmd-enclave-service",
- "kassandra-shared 0.0.1-alpha",
+ "kassandra-shared 0.0.2-alpha",
  "rand_core",
  "tracing",
  "tracing-log",

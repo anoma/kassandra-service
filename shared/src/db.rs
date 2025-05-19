@@ -77,6 +77,7 @@ impl<'de> Deserialize<'de> for EncKey {
     Debug,
     Copy,
     Clone,
+    Hash,
     PartialEq,
     Eq,
     PartialOrd,
@@ -128,7 +129,16 @@ impl Index {
 }
 
 #[derive(
-    Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, BorshSerialize, BorshDeserialize,
+    Debug,
+    Clone,
+    Hash,
+    PartialEq,
+    Eq,
+    Default,
+    Serialize,
+    Deserialize,
+    BorshSerialize,
+    BorshDeserialize,
 )]
 pub struct IndexList(alloc::vec::Vec<Index>);
 
