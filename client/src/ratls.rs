@@ -26,8 +26,9 @@ pub fn register_fmd_key<C: EnclaveClient>(
     base_dir: impl AsRef<Path>,
     csk_key: CompactSecretKey,
     birthday: Option<u64>,
+    gamma: usize,
 ) {
-    let key_hash = hash_key(&csk_key);
+    let key_hash = hash_key(&csk_key, gamma);
     let services = match Config::get_services(base_dir, &key_hash) {
         Ok(services) => services,
         Err(e) => {

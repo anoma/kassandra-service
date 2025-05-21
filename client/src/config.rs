@@ -7,7 +7,8 @@ use std::collections::btree_map::Entry;
 use std::io::ErrorKind;
 use std::path::Path;
 
-use fmd::fmd2_compact::CompactSecretKey;
+use fmd::KeyExpansion;
+use fmd::fmd2_compact::{CompactSecretKey, MultiFmd2CompactScheme};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use shared::db::EncKey;
@@ -17,7 +18,7 @@ pub const CLIENT_FILE_NAME: &str = "kassandra-client.toml";
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Config {
-    /// A map from the hash of secret key to the services
+    /// A map from the hash of FMD secret key to the services
     /// it is registered with
     pub services: BTreeMap<String, Vec<Service>>,
 }
@@ -99,9 +100,16 @@ impl Config {
     }
 }
 
-pub fn hash_key(key: &CompactSecretKey) -> String {
+
+/// Get a hash of an FMD key from a Compact secret key and choice of gamma.
+pub fn hash_key(csk_key: &CompactSecretKey, gamma: usize) -> String {
     let mut hasher = sha2::Sha256::new();
-    hasher.update(serde_json::to_string(key).unwrap().as_bytes());
+
+    let cpk_key = csk_key.master_public_key();
+    let scheme = MultiFmd2CompactScheme::new(gamma, 1);
+    let (fmd_key, _) = scheme.expand_keypair(csk_key, &cpk_key);
+
+    hasher.update(serde_json::to_string(&fmd_key).unwrap().as_bytes());
     let bytes: [u8; 32] = hasher.finalize().into();
     hex::encode(bytes)
 }
