@@ -1,12 +1,12 @@
 use clap::{Parser, Subcommand};
-use kassandra_client::config::Config;
-use kassandra_client::init_logging;
+use kassandra_client::config::{Config, hash_key};
 use kassandra_client::query::query_fmd_key;
 use kassandra_client::ratls::register_fmd_key;
 #[cfg(feature = "tdx")]
 use kassandra_client::tdx;
 #[cfg(feature = "transparent")]
 use kassandra_client::transparent;
+use kassandra_client::{encryption_key, get_host_uuid, init_logging};
 
 #[derive(Parser)]
 #[command(version, about, long_about=None)]
@@ -63,8 +63,11 @@ fn main() {
     match &cli.command {
         Commands::AddService { key, url } => {
             tracing::info!("Adding service to the config file...");
+            let uuid = get_host_uuid(url);
             let csk_key = serde_json::from_str(key).unwrap();
-            Config::add_service(&cli.base_dir, csk_key, url).unwrap();
+            let enc_key = encryption_key(&csk_key, &uuid);
+            let key_hash = hash_key(&csk_key);
+            Config::add_service(&cli.base_dir, key_hash, url, enc_key).unwrap();
         }
         Commands::RegisterKey { key, birthday } => {
             tracing::info!("Registering FMD key...");
@@ -76,7 +79,8 @@ fn main() {
         }
         Commands::QueryIndices { key } => {
             let csk_key = serde_json::from_str(key).unwrap();
-            let indices = query_fmd_key(&cli.base_dir, &csk_key);
+            let key_hash = hash_key(&csk_key);
+            let indices = query_fmd_key(&cli.base_dir, &key_hash);
             let result = serde_json::to_string_pretty(&indices).unwrap();
             tracing::info!("{result}");
         }

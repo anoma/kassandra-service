@@ -10,6 +10,7 @@ use std::path::Path;
 use fmd::fmd2_compact::CompactSecretKey;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
+use shared::db::EncKey;
 
 /// The name of the config file
 pub const CLIENT_FILE_NAME: &str = "kassandra-client.toml";
@@ -28,6 +29,8 @@ pub struct Service {
     pub url: String,
     /// An index indication which share of fmd keys it received
     pub index: usize,
+    /// The key used to decrypt responses from the service
+    pub enc_key: EncKey,
 }
 
 impl Config {
@@ -64,16 +67,17 @@ impl Config {
     /// Add a new service which a specified key will be registered to.
     pub fn add_service(
         path: impl AsRef<Path>,
-        key: CompactSecretKey,
+        key: String,
         url: &str,
+        enc_key: EncKey,
     ) -> std::io::Result<()> {
         let mut config = Self::load_or_new(path.as_ref())?;
-        let key = hash_key(&key);
         match config.services.entry(key) {
             Entry::Vacant(e) => {
                 e.insert(vec![Service {
                     url: url.to_string(),
                     index: 1,
+                    enc_key,
                 }]);
             }
             Entry::Occupied(mut o) => {
@@ -81,6 +85,7 @@ impl Config {
                 o.get_mut().push(Service {
                     url: url.to_string(),
                     index: ix + 1,
+                    enc_key,
                 });
             }
         }
@@ -88,17 +93,13 @@ impl Config {
     }
 
     /// Get the services that the specified key is configured to be registered to
-    pub fn get_services(
-        path: impl AsRef<Path>,
-        key: &CompactSecretKey,
-    ) -> std::io::Result<Vec<Service>> {
+    pub fn get_services(path: impl AsRef<Path>, key: &String) -> std::io::Result<Vec<Service>> {
         let config = Self::load_or_new(path)?;
-        let key = hash_key(key);
-        Ok(config.services.get(&key).cloned().unwrap_or_default())
+        Ok(config.services.get(key).cloned().unwrap_or_default())
     }
 }
 
-fn hash_key(key: &CompactSecretKey) -> String {
+pub fn hash_key(key: &CompactSecretKey) -> String {
     let mut hasher = sha2::Sha256::new();
     hasher.update(serde_json::to_string(key).unwrap().as_bytes());
     let bytes: [u8; 32] = hasher.finalize().into();

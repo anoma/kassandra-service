@@ -23,7 +23,7 @@ pub fn init_logging() {
     SubscriberBuilder::default().with_ansi(true).init();
 }
 
-fn get_host_uuid(url: &str) -> String {
+pub fn get_host_uuid(url: &str) -> String {
     let mut stream = OutgoingTcp::new(url);
     stream.write(ClientMsg::RequestUUID);
     match stream.read() {
@@ -33,7 +33,7 @@ fn get_host_uuid(url: &str) -> String {
     }
 }
 
-fn encryption_key(csk_key: &CompactSecretKey, salt: &str) -> EncKey {
+pub fn encryption_key(csk_key: &CompactSecretKey, salt: &str) -> EncKey {
     let hk = Hkdf::<sha2::Sha256>::new(
         Some(salt.as_bytes()),
         serde_json::to_string(csk_key).unwrap().as_bytes(),

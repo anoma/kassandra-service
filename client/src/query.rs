@@ -5,17 +5,16 @@ use std::path::Path;
 
 use chacha20poly1305::aead::Aead;
 use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
-use fmd::fmd2_compact::CompactSecretKey;
 use shared::db::{EncKey, IndexList};
 use shared::{ClientMsg, ServerMsg};
 
 use crate::com::OutgoingTcp;
 use crate::config::{Config, Service};
-use crate::{encryption_key, get_host_uuid};
+use crate::get_host_uuid;
 
 /// Query all services where a key is registered and combine the results.
-pub fn query_fmd_key(base_dir: impl AsRef<Path>, csk_key: &CompactSecretKey) -> IndexList {
-    let services = match Config::get_services(base_dir, csk_key) {
+pub fn query_fmd_key(base_dir: impl AsRef<Path>, key_hash: &String) -> IndexList {
+    let services = match Config::get_services(base_dir, key_hash) {
         Ok(services) => services,
         Err(e) => {
             tracing::error!("Error getting the associated services from the config file: {e}");
@@ -23,9 +22,8 @@ pub fn query_fmd_key(base_dir: impl AsRef<Path>, csk_key: &CompactSecretKey) -> 
         }
     };
     let mut indices = IndexList::default();
-    for Service { url, .. } in services {
+    for Service { url, enc_key, .. } in services {
         let uuid = get_host_uuid(&url);
-        let enc_key = encryption_key(csk_key, &uuid);
         if let Some(list) = query_service(&url, &enc_key, &uuid) {
             indices.combine(list);
         }

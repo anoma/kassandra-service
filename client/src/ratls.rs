@@ -16,9 +16,9 @@ use shared::ratls::{Connection, FmdKeyRegistration};
 use shared::tee::EnclaveClient;
 use shared::{AckType, ClientMsg, ServerMsg};
 
+use crate::GAMMA;
 use crate::com::OutgoingTcp;
-use crate::config::{Config, Service};
-use crate::{GAMMA, encryption_key, get_host_uuid};
+use crate::config::{Config, Service, hash_key};
 
 /// Registers an fmd key to each service instance
 /// specified in the config file.
@@ -27,7 +27,8 @@ pub fn register_fmd_key<C: EnclaveClient>(
     csk_key: CompactSecretKey,
     birthday: Option<u64>,
 ) {
-    let services = match Config::get_services(base_dir, &csk_key) {
+    let key_hash = hash_key(&csk_key);
+    let services = match Config::get_services(base_dir, &key_hash) {
         Ok(services) => services,
         Err(e) => {
             tracing::error!("Error getting the associated services from the config file: {e}");
@@ -41,9 +42,12 @@ pub fn register_fmd_key<C: EnclaveClient>(
     let detection_keys = scheme
         .multi_extract(&fmd_key, services.len(), 1, 1, services.len())
         .unwrap();
-    for Service { url, index } in services {
-        let uuid = get_host_uuid(&url);
-        let enc_key = encryption_key(&csk_key, &uuid);
+    for Service {
+        url,
+        index,
+        enc_key,
+    } in services
+    {
         register_fmd_key_to_service::<C>(
             &url,
             enc_key,
