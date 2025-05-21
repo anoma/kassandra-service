@@ -9,7 +9,7 @@ use shared::{MsgFromHost, MsgToHost};
 
 use crate::fmd::{IndexSet, check_flags};
 
-const GAMMA: usize = 12;
+const GAMMA: usize = 20;
 
 #[derive(Clone)]
 struct Ctx<RA, COM, RNG>

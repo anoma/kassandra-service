@@ -17,7 +17,7 @@ pub mod tdx;
 #[cfg(feature = "transparent")]
 pub mod transparent;
 
-pub const GAMMA: usize = 12;
+pub const GAMMA: usize = 20;
 
 pub fn init_logging() {
     SubscriberBuilder::default().with_ansi(true).init();
