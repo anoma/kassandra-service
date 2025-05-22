@@ -5,11 +5,8 @@
 //! Currently, the only direct communication between enclaves and
 //! clients is registering clients' FMD detection keys with the
 //! enclave.
-
-use std::path::Path;
-
-use fmd::fmd2_compact::{CompactSecretKey, MultiFmd2CompactScheme};
-use fmd::{DetectionKey, KeyExpansion, MultiFmdScheme};
+use fmd::fmd2_compact::MultiFmd2CompactScheme;
+use fmd::{DetectionKey, FmdSecretKey, MultiFmdScheme};
 use rand_core::{OsRng, RngCore};
 use shared::db::EncKey;
 use shared::ratls::{Connection, FmdKeyRegistration};
@@ -18,31 +15,21 @@ use shared::{AckType, ClientMsg, ServerMsg};
 
 use crate::GAMMA;
 use crate::com::OutgoingTcp;
-use crate::config::{Config, Service, hash_key};
+use crate::config::{Config, Service};
 
 /// Registers an fmd key to each service instance
 /// specified in the config file.
 pub fn register_fmd_key<C: EnclaveClient>(
-    base_dir: impl AsRef<Path>,
-    csk_key: CompactSecretKey,
+    config: &Config,
+    key_hash: String,
+    fmd_key: &FmdSecretKey,
     birthday: Option<u64>,
-    gamma: usize,
 ) {
-    let key_hash = hash_key(&csk_key, gamma);
-    let config = match Config::load_or_new(base_dir) {
-        Ok(config) => config,
-        Err(e) => {
-            tracing::error!("Error getting the associated services from the config file: {e}");
-            panic!("Error getting the associated services from the config file: {e}");
-        }
-    };
     let services = config.get_services(&key_hash);
-    // Get the fmd key and encryption key
-    let cpk_key = csk_key.master_public_key();
-    let mut scheme = MultiFmd2CompactScheme::new(GAMMA, 1);
-    let (fmd_key, _) = scheme.expand_keypair(&csk_key, &cpk_key);
+    // Get the encryption key
+    let scheme = MultiFmd2CompactScheme::new(GAMMA, 1);
     let detection_keys = scheme
-        .multi_extract(&fmd_key, services.len(), 1, 1, services.len())
+        .multi_extract(fmd_key, services.len(), 1, 1, services.len())
         .unwrap();
     for Service {
         url,

@@ -78,11 +78,25 @@ fn main() {
         }
         Commands::RegisterKey { key, birthday } => {
             tracing::info!("Registering FMD key...");
+            let config = match Config::load_or_new(&cli.base_dir) {
+                Ok(config) => config,
+                Err(e) => {
+                    tracing::error!(
+                        "Error getting the associated services from the config file: {e}"
+                    );
+                    panic!("Error getting the associated services from the config file: {e}");
+                }
+            };
             let csk_key = serde_json::from_str(key).unwrap();
+            let key_hash = hash_key(&csk_key, GAMMA);
+            let cpk_key = csk_key.master_public_key();
+            let mut scheme = MultiFmd2CompactScheme::new(GAMMA, 1);
+            let (fmd_key, _) = scheme.expand_keypair(&csk_key, &cpk_key);
+
             #[cfg(feature = "tdx")]
-            register_fmd_key::<tdx::TdxClient>(&cli.base_dir, csk_key, *birthday, GAMMA);
+            register_fmd_key::<tdx::TdxClient>(&config, key_hash, &fmd_key, *birthday);
             #[cfg(feature = "transparent")]
-            register_fmd_key::<transparent::TClient>(&cli.base_dir, csk_key, *birthday, GAMMA);
+            register_fmd_key::<transparent::TClient>(&config, key_hash, &fmd_key, *birthday);
         }
         Commands::QueryIndices { key } => {
             let csk_key = serde_json::from_str(key).unwrap();
