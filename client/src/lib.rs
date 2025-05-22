@@ -1,5 +1,5 @@
 use chacha20poly1305::Key;
-use fmd::fmd2_compact::CompactSecretKey;
+use fmd::FmdSecretKey;
 use hkdf::Hkdf;
 use shared::db::EncKey;
 use shared::{ClientMsg, ServerMsg};
@@ -33,10 +33,10 @@ pub fn get_host_uuid(url: &str) -> String {
     }
 }
 
-pub fn encryption_key(csk_key: &CompactSecretKey, salt: &str) -> EncKey {
+pub fn encryption_key(fmd_key: &FmdSecretKey, salt: &str) -> EncKey {
     let hk = Hkdf::<sha2::Sha256>::new(
         Some(salt.as_bytes()),
-        serde_json::to_string(csk_key).unwrap().as_bytes(),
+        serde_json::to_string(fmd_key).unwrap().as_bytes(),
     );
     let mut encryption_key = [0u8; 32];
     hk.expand("Database encryption key".as_bytes(), &mut encryption_key)

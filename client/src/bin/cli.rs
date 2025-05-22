@@ -1,4 +1,6 @@
 use clap::{Parser, Subcommand};
+use fmd::KeyExpansion;
+use fmd::fmd2_compact::{CompactSecretKey, MultiFmd2CompactScheme};
 use kassandra_client::config::{Config, hash_key};
 use kassandra_client::query::query_fmd_key;
 use kassandra_client::ratls::register_fmd_key;
@@ -64,8 +66,11 @@ fn main() {
         Commands::AddService { key, url } => {
             tracing::info!("Adding service to the config file...");
             let uuid = get_host_uuid(url);
-            let csk_key = serde_json::from_str(key).unwrap();
-            let enc_key = encryption_key(&csk_key, &uuid);
+            let csk_key: CompactSecretKey = serde_json::from_str(key).unwrap();
+            let cpk_key = csk_key.master_public_key();
+            let scheme = MultiFmd2CompactScheme::new(GAMMA, 1);
+            let (fmd_key, _) = scheme.expand_keypair(&csk_key, &cpk_key);
+            let enc_key = encryption_key(&fmd_key, &uuid);
             let key_hash = hash_key(&csk_key, GAMMA);
             Config::add_service(&cli.base_dir, key_hash, url, enc_key).unwrap();
         }

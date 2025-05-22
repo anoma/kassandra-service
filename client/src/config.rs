@@ -100,7 +100,6 @@ impl Config {
     }
 }
 
-
 /// Get a hash of an FMD key from a Compact secret key and choice of gamma.
 pub fn hash_key(csk_key: &CompactSecretKey, gamma: usize) -> String {
     let mut hasher = sha2::Sha256::new();
