@@ -56,7 +56,7 @@ impl Config {
     }
 
     /// Save the config at the specified path
-    pub fn save(mut self, path: impl AsRef<Path>) -> std::io::Result<()> {
+    pub fn save(&mut self, path: impl AsRef<Path>) -> std::io::Result<()> {
         for (_, services) in self.services.iter_mut() {
             services.sort_by_key(|s| s.index);
             services.dedup_by_key(|s| s.index);
