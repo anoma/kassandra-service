@@ -72,7 +72,9 @@ fn main() {
             let (fmd_key, _) = scheme.expand_keypair(&csk_key, &cpk_key);
             let enc_key = encryption_key(&fmd_key, &uuid);
             let key_hash = hash_key(&csk_key, GAMMA);
-            Config::add_service(&cli.base_dir, key_hash, url, enc_key).unwrap();
+            let mut config = Config::load_or_new(&cli.base_dir).unwrap();
+            config.add_service(key_hash, url, enc_key);
+            config.save(&cli.base_dir).unwrap();
         }
         Commands::RegisterKey { key, birthday } => {
             tracing::info!("Registering FMD key...");

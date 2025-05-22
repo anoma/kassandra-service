@@ -66,14 +66,8 @@ impl Config {
     }
 
     /// Add a new service which a specified key will be registered to.
-    pub fn add_service(
-        path: impl AsRef<Path>,
-        key: String,
-        url: &str,
-        enc_key: EncKey,
-    ) -> std::io::Result<()> {
-        let mut config = Self::load_or_new(path.as_ref())?;
-        match config.services.entry(key) {
+    pub fn add_service(&mut self, key: String, url: &str, enc_key: EncKey) {
+        match self.services.entry(key) {
             Entry::Vacant(e) => {
                 e.insert(vec![Service {
                     url: url.to_string(),
@@ -90,13 +84,11 @@ impl Config {
                 });
             }
         }
-        config.save(path)
     }
 
     /// Get the services that the specified key is configured to be registered to
-    pub fn get_services(path: impl AsRef<Path>, key: &String) -> std::io::Result<Vec<Service>> {
-        let config = Self::load_or_new(path)?;
-        Ok(config.services.get(key).cloned().unwrap_or_default())
+    pub fn get_services(&self, key: &String) -> Vec<Service> {
+        self.services.get(key).cloned().unwrap_or_default()
     }
 }
 

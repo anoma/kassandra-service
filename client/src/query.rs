@@ -14,13 +14,14 @@ use crate::get_host_uuid;
 
 /// Query all services where a key is registered and combine the results.
 pub fn query_fmd_key(base_dir: impl AsRef<Path>, key_hash: &String) -> IndexList {
-    let services = match Config::get_services(base_dir, key_hash) {
-        Ok(services) => services,
+    let config = match Config::load_or_new(base_dir) {
+        Ok(config) => config,
         Err(e) => {
             tracing::error!("Error getting the associated services from the config file: {e}");
             panic!("Error getting the associated services from the config file: {e}");
         }
     };
+    let services = config.get_services(key_hash);
     let mut indices = IndexList::default();
     for Service { url, enc_key, .. } in services {
         let uuid = get_host_uuid(&url);

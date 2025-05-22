@@ -29,13 +29,14 @@ pub fn register_fmd_key<C: EnclaveClient>(
     gamma: usize,
 ) {
     let key_hash = hash_key(&csk_key, gamma);
-    let services = match Config::get_services(base_dir, &key_hash) {
-        Ok(services) => services,
+    let config = match Config::load_or_new(base_dir) {
+        Ok(config) => config,
         Err(e) => {
             tracing::error!("Error getting the associated services from the config file: {e}");
             panic!("Error getting the associated services from the config file: {e}");
         }
     };
+    let services = config.get_services(&key_hash);
     // Get the fmd key and encryption key
     let cpk_key = csk_key.master_public_key();
     let mut scheme = MultiFmd2CompactScheme::new(GAMMA, 1);
