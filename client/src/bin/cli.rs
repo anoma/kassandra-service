@@ -3,11 +3,7 @@ use fmd::KeyExpansion;
 use fmd::fmd2_compact::{CompactSecretKey, MultiFmd2CompactScheme};
 use kassandra_client::config::{Config, hash_key};
 use kassandra_client::query::query_fmd_key;
-use kassandra_client::ratls::register_fmd_key;
-#[cfg(feature = "tdx")]
-use kassandra_client::tdx;
-#[cfg(feature = "transparent")]
-use kassandra_client::transparent;
+use kassandra_client::register_fmd_key;
 use kassandra_client::{GAMMA, encryption_key, get_host_uuid, init_logging};
 
 #[derive(Parser)]
@@ -92,11 +88,7 @@ fn main() {
             let cpk_key = csk_key.master_public_key();
             let mut scheme = MultiFmd2CompactScheme::new(GAMMA, 1);
             let (fmd_key, _) = scheme.expand_keypair(&csk_key, &cpk_key);
-
-            #[cfg(feature = "tdx")]
-            register_fmd_key::<tdx::TdxClient>(&config, key_hash, &fmd_key, *birthday);
-            #[cfg(feature = "transparent")]
-            register_fmd_key::<transparent::TClient>(&config, key_hash, &fmd_key, *birthday);
+            register_fmd_key(&config, key_hash, &fmd_key, *birthday);
         }
         Commands::QueryIndices { key } => {
             let csk_key = serde_json::from_str(key).unwrap();

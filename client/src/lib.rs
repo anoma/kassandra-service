@@ -6,8 +6,9 @@ use shared::{ClientMsg, ServerMsg};
 use tracing_subscriber::fmt::SubscriberBuilder;
 
 use crate::com::OutgoingTcp;
+use crate::config::Config;
 
-pub mod ratls;
+mod ratls;
 
 pub mod com;
 pub mod config;
@@ -43,4 +44,23 @@ pub fn encryption_key(fmd_key: &FmdSecretKey, salt: &str) -> EncKey {
         .unwrap();
     let enc_key: Key = encryption_key.into();
     enc_key.into()
+}
+
+#[cfg(feature = "tdx")]
+pub fn register_fmd_key(
+    config: &Config,
+    key_hash: String,
+    fmd_key: &FmdSecretKey,
+    birthday: Option<u64>,
+) {
+    ratls::register_fmd_key::<tdx::TdxClient>(config, key_hash, fmd_key, birthday)
+}
+#[cfg(feature = "transparent")]
+pub fn register_fmd_key(
+    config: &Config,
+    key_hash: String,
+    fmd_key: &FmdSecretKey,
+    birthday: Option<u64>,
+) {
+    ratls::register_fmd_key::<transparent::TClient>(config, key_hash, fmd_key, birthday)
 }

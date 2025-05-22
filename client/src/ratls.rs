@@ -19,7 +19,7 @@ use crate::config::{Config, Service};
 
 /// Registers an fmd key to each service instance
 /// specified in the config file.
-pub fn register_fmd_key<C: EnclaveClient>(
+pub(crate) fn register_fmd_key<C: EnclaveClient>(
     config: &Config,
     key_hash: String,
     fmd_key: &FmdSecretKey,
@@ -51,7 +51,7 @@ pub fn register_fmd_key<C: EnclaveClient>(
 ///
 /// The client also validates the Remote Attestation report
 /// provided by the enclave.
-pub fn register_fmd_key_to_service<C: EnclaveClient>(
+fn register_fmd_key_to_service<C: EnclaveClient>(
     url: &str,
     encryption_key: EncKey,
     detection_key: DetectionKey,
