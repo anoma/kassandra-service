@@ -38,7 +38,7 @@ pub fn register_fmd_key<C: EnclaveClient>(
     };
     // Get the fmd key and encryption key
     let cpk_key = csk_key.master_public_key();
-    let scheme = MultiFmd2CompactScheme::new(GAMMA, 1);
+    let mut scheme = MultiFmd2CompactScheme::new(GAMMA, 1);
     let (fmd_key, _) = scheme.expand_keypair(&csk_key, &cpk_key);
     let detection_keys = scheme
         .multi_extract(&fmd_key, services.len(), 1, 1, services.len())

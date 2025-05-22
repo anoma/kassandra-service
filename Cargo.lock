@@ -2041,8 +2041,8 @@ name = "fmd-enclave-service"
 version = "0.0.1-alpha"
 dependencies = [
  "chacha20poly1305",
- "kassandra-shared 0.0.2-alpha",
- "polyfuzzy",
+ "kassandra-shared 0.0.3-alpha",
+ "polyfuzzy 0.5.0",
  "x25519-dalek",
 ]
 
@@ -2505,10 +2505,10 @@ dependencies = [
  "flume",
  "futures",
  "home",
- "kassandra-shared 0.0.2-alpha",
+ "kassandra-shared 0.0.3-alpha",
  "namada_sdk",
  "once_cell",
- "polyfuzzy",
+ "polyfuzzy 0.5.0",
  "rayon",
  "reqwest 0.12.15",
  "rusqlite",
@@ -3700,8 +3700,8 @@ dependencies = [
  "curve25519-dalek",
  "hex",
  "hkdf",
- "kassandra-shared 0.0.2-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "polyfuzzy",
+ "kassandra-shared 0.0.2-alpha",
+ "polyfuzzy 0.5.0",
  "rand_core",
  "serde",
  "serde_cbor",
@@ -3719,13 +3719,15 @@ dependencies = [
 [[package]]
 name = "kassandra-shared"
 version = "0.0.2-alpha"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "248852e4390561ee568ec214be663837e2d254576ec6b210f5799c24450203b1"
 dependencies = [
  "borsh",
  "chacha20poly1305",
  "cobs 0.3.0",
  "hex",
  "once_cell",
- "polyfuzzy",
+ "polyfuzzy 0.1.0",
  "rand_core",
  "serde",
  "serde_cbor",
@@ -3737,16 +3739,14 @@ dependencies = [
 
 [[package]]
 name = "kassandra-shared"
-version = "0.0.2-alpha"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "248852e4390561ee568ec214be663837e2d254576ec6b210f5799c24450203b1"
+version = "0.0.3-alpha"
 dependencies = [
  "borsh",
  "chacha20poly1305",
  "cobs 0.3.0",
  "hex",
  "once_cell",
- "polyfuzzy",
+ "polyfuzzy 0.5.0",
  "rand_core",
  "serde",
  "serde_cbor",
@@ -5466,6 +5466,19 @@ name = "polyfuzzy"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4c8aa1a6ea51b5f6cb5053fd11ff19f71ba5ef5f9e99709aded1c030ddb4874"
+dependencies = [
+ "curve25519-dalek",
+ "rand_core",
+ "serde",
+ "sha2 0.10.8",
+ "subtle",
+]
+
+[[package]]
+name = "polyfuzzy"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7ad377e0383a3332e1deb427b97c8670a954efa00add87d2071daab421dae24"
 dependencies = [
  "curve25519-dalek",
  "rand_core",
@@ -7405,7 +7418,7 @@ version = "0.0.1-alpha"
 dependencies = [
  "clap",
  "fmd-enclave-service",
- "kassandra-shared 0.0.2-alpha",
+ "kassandra-shared 0.0.3-alpha",
  "rand_core",
  "tracing",
  "tracing-log",

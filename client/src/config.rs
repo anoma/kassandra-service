@@ -105,7 +105,7 @@ pub fn hash_key(csk_key: &CompactSecretKey, gamma: usize) -> String {
     let mut hasher = sha2::Sha256::new();
 
     let cpk_key = csk_key.master_public_key();
-    let scheme = MultiFmd2CompactScheme::new(gamma, 1);
+    let mut scheme = MultiFmd2CompactScheme::new(gamma, 1);
     let (fmd_key, _) = scheme.expand_keypair(csk_key, &cpk_key);
 
     hasher.update(serde_json::to_string(&fmd_key).unwrap().as_bytes());
