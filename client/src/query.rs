@@ -11,13 +11,13 @@ use crate::config::{Config, Service};
 use crate::get_host_uuid;
 
 /// Query all services where a key is registered and combine the results.
-pub fn query_fmd_key(config: &Config, key_hash: &String) -> IndexList {
+pub fn query_fmd_key(config: &Config, key_hash: &String) -> Vec<IndexList> {
     let services = config.get_services(key_hash);
-    let mut indices = IndexList::default();
+    let mut indices = vec![];
     for Service { url, enc_key, .. } in services {
         let uuid = get_host_uuid(&url);
         if let Some(list) = query_service(&url, &enc_key, &uuid) {
-            indices.combine(list);
+            indices.push(list);
         }
     }
     indices
