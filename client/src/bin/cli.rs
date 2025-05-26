@@ -93,7 +93,16 @@ fn main() {
         Commands::QueryIndices { key } => {
             let csk_key = serde_json::from_str(key).unwrap();
             let key_hash = hash_key(&csk_key, GAMMA);
-            let indices = query_fmd_key(&cli.base_dir, &key_hash);
+            let config = match Config::load_or_new(&cli.base_dir) {
+                Ok(config) => config,
+                Err(e) => {
+                    tracing::error!(
+                        "Error getting the associated services from the config file: {e}"
+                    );
+                    panic!("Error getting the associated services from the config file: {e}");
+                }
+            };
+            let indices = query_fmd_key(&config, &key_hash);
             let result = serde_json::to_string_pretty(&indices).unwrap();
             tracing::info!("{result}");
         }

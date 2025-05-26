@@ -1,8 +1,6 @@
 //! Functions for querying the Kassandra service DB for data
 //! relevant to a particular registered key.
 
-use std::path::Path;
-
 use chacha20poly1305::aead::Aead;
 use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce};
 use shared::db::{EncKey, IndexList};
@@ -13,14 +11,7 @@ use crate::config::{Config, Service};
 use crate::get_host_uuid;
 
 /// Query all services where a key is registered and combine the results.
-pub fn query_fmd_key(base_dir: impl AsRef<Path>, key_hash: &String) -> IndexList {
-    let config = match Config::load_or_new(base_dir) {
-        Ok(config) => config,
-        Err(e) => {
-            tracing::error!("Error getting the associated services from the config file: {e}");
-            panic!("Error getting the associated services from the config file: {e}");
-        }
-    };
+pub fn query_fmd_key(config: &Config, key_hash: &String) -> IndexList {
     let services = config.get_services(key_hash);
     let mut indices = IndexList::default();
     for Service { url, enc_key, .. } in services {
