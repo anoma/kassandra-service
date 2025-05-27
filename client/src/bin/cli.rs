@@ -61,7 +61,7 @@ fn main() {
     match &cli.command {
         Commands::AddService { key, url } => {
             tracing::info!("Adding service to the config file...");
-            let uuid = get_host_uuid(url);
+            let uuid = get_host_uuid(url).unwrap();
             let csk_key: CompactSecretKey = serde_json::from_str(key).unwrap();
             let cpk_key = csk_key.master_public_key();
             let mut scheme = MultiFmd2CompactScheme::new(GAMMA, 1);
@@ -88,7 +88,7 @@ fn main() {
             let cpk_key = csk_key.master_public_key();
             let mut scheme = MultiFmd2CompactScheme::new(GAMMA, 1);
             let (fmd_key, _) = scheme.expand_keypair(&csk_key, &cpk_key);
-            register_fmd_key(&config, key_hash, &fmd_key, *birthday);
+            register_fmd_key(&config, key_hash, &fmd_key, *birthday).unwrap();
         }
         Commands::QueryIndices { key } => {
             let csk_key = serde_json::from_str(key).unwrap();
@@ -102,7 +102,7 @@ fn main() {
                     panic!("Error getting the associated services from the config file: {e}");
                 }
             };
-            let indices = query_fmd_key(&config, &key_hash);
+            let indices = query_fmd_key(&config, &key_hash).unwrap();
             let result = serde_json::to_string_pretty(&indices).unwrap();
             tracing::info!("{result}");
         }

@@ -7,11 +7,13 @@ use tracing_subscriber::fmt::SubscriberBuilder;
 
 use crate::com::OutgoingTcp;
 use crate::config::Config;
+use crate::error::Error;
 
 mod ratls;
 
 pub mod com;
 pub mod config;
+pub mod error;
 pub mod query;
 #[cfg(feature = "tdx")]
 pub mod tdx;
@@ -24,13 +26,15 @@ pub fn init_logging() {
     SubscriberBuilder::default().with_ansi(true).init();
 }
 
-pub fn get_host_uuid(url: &str) -> String {
-    let mut stream = OutgoingTcp::new(url);
+pub fn get_host_uuid(url: &str) -> error::Result<String> {
+    let mut stream = OutgoingTcp::new(url)?;
     stream.write(ClientMsg::RequestUUID);
     match stream.read() {
-        Ok(ServerMsg::UUID(uuid)) => uuid,
-        Ok(ServerMsg::Error(err)) => panic!("{err}"),
-        _ => panic!("Requesting UUID from host failed. Could not parse response."),
+        Ok(ServerMsg::UUID(uuid)) => Ok(uuid),
+        Ok(ServerMsg::Error(err)) => Err(Error::ServerError(err)),
+        _ => Err(Error::ServerError(format!(
+            "Requesting UUID from host at {url} failed. Could not parse response."
+        ))),
     }
 }
 
@@ -41,7 +45,7 @@ pub fn encryption_key(fmd_key: &FmdSecretKey, salt: &str) -> EncKey {
     );
     let mut encryption_key = [0u8; 32];
     hk.expand("Database encryption key".as_bytes(), &mut encryption_key)
-        .unwrap();
+        .expect("This operation should not fail.");
     let enc_key: Key = encryption_key.into();
     enc_key.into()
 }
@@ -52,7 +56,7 @@ pub fn register_fmd_key(
     key_hash: String,
     fmd_key: &FmdSecretKey,
     birthday: Option<u64>,
-) {
+) -> error::Result<()> {
     ratls::register_fmd_key::<tdx::TdxClient>(config, key_hash, fmd_key, birthday)
 }
 #[cfg(feature = "transparent")]
@@ -61,6 +65,6 @@ pub fn register_fmd_key(
     key_hash: String,
     fmd_key: &FmdSecretKey,
     birthday: Option<u64>,
-) {
+) -> error::Result<()> {
     ratls::register_fmd_key::<transparent::TClient>(config, key_hash, fmd_key, birthday)
 }

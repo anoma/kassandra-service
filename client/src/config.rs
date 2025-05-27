@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use shared::db::EncKey;
 
+use crate::error::{self, Error};
+
 /// The name of the config file
 pub const CLIENT_FILE_NAME: &str = "kassandra-client.toml";
 
@@ -36,17 +38,17 @@ pub struct Service {
 
 impl Config {
     /// Load the config from the specified path
-    pub fn load(path: impl AsRef<Path>) -> std::io::Result<Self> {
-        toml::from_str(&std::fs::read_to_string(path)?).map_err(|e| {
-            std::io::Error::new(
+    pub fn load(path: impl AsRef<Path>) -> error::Result<Self> {
+        toml::from_str(&std::fs::read_to_string(path).map_err(Error::Io)?).map_err(|e| {
+            Error::Io(std::io::Error::new(
                 ErrorKind::InvalidData,
                 format!("Could not parse client config file: {e}"),
-            )
+            ))
         })
     }
 
     /// Load a config if it exists, otherwise create a new one
-    pub fn load_or_new(path: impl AsRef<Path>) -> std::io::Result<Self> {
+    pub fn load_or_new(path: impl AsRef<Path>) -> error::Result<Self> {
         let path = path.as_ref().join(CLIENT_FILE_NAME);
         if path.exists() {
             Self::load(path)
@@ -56,13 +58,17 @@ impl Config {
     }
 
     /// Save the config at the specified path
-    pub fn save(&mut self, path: impl AsRef<Path>) -> std::io::Result<()> {
+    pub fn save(&mut self, path: impl AsRef<Path>) -> error::Result<()> {
         for (_, services) in self.services.iter_mut() {
             services.sort_by_key(|s| s.index);
             services.dedup_by_key(|s| s.index);
         }
         let dest = path.as_ref().join(CLIENT_FILE_NAME);
-        std::fs::write(dest, toml::to_string(&self).unwrap())
+        std::fs::write(
+            dest,
+            toml::to_string(&self).expect("This operation should not fail"),
+        )
+        .map_err(Error::Io)
     }
 
     /// Add a new service which a specified key will be registered to.
