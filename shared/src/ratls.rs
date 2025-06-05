@@ -13,6 +13,7 @@ use rand_core::{CryptoRng, RngCore};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
+use zeroize::Zeroize;
 
 use crate::db::EncKey;
 use crate::{ClientMsg, MsgToHost};
@@ -40,7 +41,7 @@ pub struct TlsCiphertext {
 
 /// The data needed to register a user's key with the
 /// Kassandra service.
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Zeroize)]
 pub struct FmdKeyRegistration {
     /// The secret detection key for FMD
     pub fmd_key: DetectionKey,

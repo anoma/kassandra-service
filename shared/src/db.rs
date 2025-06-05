@@ -5,11 +5,12 @@ use chacha20poly1305::Key;
 use core::fmt::Formatter;
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use zeroize::Zeroize;
 
 /// A wrapper around a ChaCha key
 ///
 /// Used to encrypted enclave responses for users
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Zeroize)]
 pub struct EncKey(Key);
 
 impl EncKey {
